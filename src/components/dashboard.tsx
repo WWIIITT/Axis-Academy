@@ -62,11 +62,10 @@ type AgentCatalog = {
     id: string;
     name: string;
     description: string;
-    skillPackPath: string;
-    skills: string[];
-    tools: string[];
+    skillIds: string[];
+    toolIds: string[];
   }>;
-  skills: Array<{ id: string; name: string; description: string }>;
+  skills: Array<{ id: string; name: string; description: string; skillPackPath: string }>;
   tools: Array<{ id: string; name: string; description: string }>;
 };
 
@@ -694,7 +693,7 @@ export function Dashboard() {
           <div className="flex flex-col gap-1">
             <h2 className="text-lg font-semibold text-ink">Agent catalog</h2>
             <p className="text-sm text-[#5c6775]">
-              Static registry for Milestone 1. Milestone 3 adds executable orchestration.
+              Worker profiles are separate from reusable skill packs and MCP tool permissions.
             </p>
           </div>
           <div className="mt-4 rounded-md border border-line bg-panel px-4 py-3 text-sm text-[#4d5967]">
@@ -705,17 +704,29 @@ export function Dashboard() {
               <article key={agent.id} className="rounded-md border border-line p-4">
                 <h3 className="text-base font-semibold text-ink">{agent.name}</h3>
                 <p className="mt-2 text-sm leading-6 text-[#4d5967]">{agent.description}</p>
-                <p className="mt-3 text-xs text-[#687586]">{agent.skillPackPath}</p>
                 <div className="mt-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#687586]">Skills</p>
-                  <p className="mt-2 text-sm leading-6 text-[#314052]">{agent.skills.join(", ")}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#687586]">Skill IDs</p>
+                  <p className="mt-2 text-sm leading-6 text-[#314052]">{agent.skillIds.join(", ")}</p>
                 </div>
                 <div className="mt-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#687586]">Tools</p>
-                  <p className="mt-2 text-sm leading-6 text-[#314052]">{agent.tools.join(", ")}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#687586]">MCP Tool IDs</p>
+                  <p className="mt-2 text-sm leading-6 text-[#314052]">{agent.toolIds.join(", ")}</p>
                 </div>
               </article>
             ))}
+          </div>
+
+          <div className="mt-6 border-t border-line pt-5">
+            <h3 className="text-base font-semibold text-ink">Skill packs</h3>
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {catalog.skills.map((skill) => (
+                <article key={skill.id} className="rounded-md border border-line bg-panel px-4 py-3">
+                  <h4 className="text-sm font-semibold text-ink">{skill.name}</h4>
+                  <p className="mt-2 text-sm leading-6 text-[#4d5967]">{skill.description}</p>
+                  <p className="mt-3 break-words text-xs text-[#687586]">{skill.skillPackPath}</p>
+                </article>
+              ))}
+            </div>
           </div>
         </section>
       </div>

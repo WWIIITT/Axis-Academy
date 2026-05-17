@@ -20,6 +20,8 @@ Core rules:
 
 ## 3. Agent Registry
 
+Agents are worker profiles. Their names describe who is responsible for a domain, not the reusable procedure they may load.
+
 | Agent | Main role | Main outputs |
 | --- | --- | --- |
 | Project Manager | Coordinate workflow, quality gates, conflict handling, final synthesis | Workflow state, final lesson package, teacher review summary |
@@ -34,19 +36,21 @@ Core rules:
 
 ## 4. Agent Skills
 
-Milestone 1 defines skills as metadata only:
+Skills are modular procedures. A skill name must not simply duplicate an agent name. Skill names should be short, lowercase, hyphenated, and action-oriented.
 
-- `workflow_orchestration`
-- `document_analysis`
-- `source_grounding`
-- `pedagogical_review`
-- `lesson_design`
-- `example_design`
-- `question_design`
-- `slide_design`
-- `quality_review`
+Current skill packs:
 
-Milestone 3 turns each skill into an executable skill pack.
+- `orchestrate-workflow`
+- `analyze-source-material`
+- `ground-claims`
+- `review-pedagogy`
+- `design-lesson`
+- `design-examples`
+- `design-questions`
+- `design-slides`
+- `review-quality`
+
+Milestone 1 exposed skill metadata in the API catalog. Milestone 3 turns each skill into an executable `SKILL.md` pack and links agents to skills by `skillIds`.
 
 Each skill pack should define:
 
@@ -60,6 +64,12 @@ Each skill pack should define:
 - Failure handling
 
 Recommended location: `.agents/skills/<skill-name>/SKILL.md`
+
+Example:
+
+- Agent profile: `project-manager`
+- Skill packs: `orchestrate-workflow`, `ground-claims`, `review-quality`
+- Tool permissions: `structured_output_validator`, `artifact_versioner`, `workflow_event_writer`
 
 ## 5. MCP Tools
 
@@ -129,5 +139,6 @@ The Project Manager only accepts schema-valid output. If the schema is invalid, 
 - Keep `SKILL.md` short and operational.
 - Put long references in `references/`.
 - Put reusable deterministic code in `scripts/`.
-- Use names that match the agent registry and API catalog.
+- Use action-oriented skill names that match the API catalog `skillIds`.
+- Do not name a skill after the agent profile that commonly uses it.
 - Keep trigger descriptions precise enough for skill discovery.

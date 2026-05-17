@@ -22,7 +22,7 @@ export function getWorkflowSeedState(lessonProjectId: string): WorkflowState {
 export function isToolAllowedForAgent(agentId: string, toolId: string): boolean {
   const agent = getAgentById(agentId);
 
-  return agent?.tools.includes(toolId) ?? false;
+  return agent?.toolIds.includes(toolId) ?? false;
 }
 
 export function getToolContract(toolId: string) {
