@@ -1,5 +1,6 @@
 import { WorkflowEventType } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { databaseUnavailableResponse } from "@/lib/api-errors";
 import { getCurrentTeacherId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createLessonProjectSchema } from "@/lib/validation";
@@ -7,16 +8,20 @@ import { createLessonProjectSchema } from "@/lib/validation";
 export async function GET() {
   const teacherId = getCurrentTeacherId();
 
-  const projects = await prisma.lessonProject.findMany({
-    where: {
-      teacherId
-    },
-    orderBy: {
-      createdAt: "desc"
-    }
-  });
+  try {
+    const projects = await prisma.lessonProject.findMany({
+      where: {
+        teacherId
+      },
+      orderBy: {
+        createdAt: "desc"
+      }
+    });
 
-  return NextResponse.json({ projects });
+    return NextResponse.json({ projects });
+  } catch (error) {
+    return databaseUnavailableResponse(error);
+  }
 }
 
 export async function POST(request: Request) {
@@ -36,21 +41,25 @@ export async function POST(request: Request) {
 
   const { title, subject, gradeLevel } = parsed.data;
 
-  const project = await prisma.lessonProject.create({
-    data: {
-      teacherId,
-      title,
-      subject,
-      gradeLevel,
-      workflowEvents: {
-        create: {
-          eventType: WorkflowEventType.PROJECT_CREATED,
-          message: "Lesson project created.",
-          teacherVisible: true
+  try {
+    const project = await prisma.lessonProject.create({
+      data: {
+        teacherId,
+        title,
+        subject,
+        gradeLevel,
+        workflowEvents: {
+          create: {
+            eventType: WorkflowEventType.PROJECT_CREATED,
+            message: "Lesson project created.",
+            teacherVisible: true
+          }
         }
       }
-    }
-  });
+    });
 
-  return NextResponse.json({ project }, { status: 201 });
+    return NextResponse.json({ project }, { status: 201 });
+  } catch (error) {
+    return databaseUnavailableResponse(error);
+  }
 }

@@ -71,6 +71,7 @@ export function Dashboard() {
   const [eventMessage, setEventMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [databaseStatus, setDatabaseStatus] = useState<string | null>(null);
 
   const selectedProjectLabel = useMemo(() => {
     if (!selectedProject) {
@@ -91,20 +92,30 @@ export function Dashboard() {
         fetch("/api/agents/catalog")
       ]);
 
-      if (!projectsResponse.ok || !providerResponse.ok || !catalogResponse.ok) {
+      if (!providerResponse.ok || !catalogResponse.ok) {
         throw new Error("Unable to load dashboard data.");
       }
 
-      const projectsPayload = (await projectsResponse.json()) as { projects: LessonProject[] };
       const providerPayload = (await providerResponse.json()) as ProviderStatus;
       const catalogPayload = (await catalogResponse.json()) as AgentCatalog;
 
-      setProjects(projectsPayload.projects);
       setProviderStatus(providerPayload);
       setCatalog(catalogPayload);
 
-      if (projectsPayload.projects.length > 0) {
-        setSelectedProjectId((current) => current ?? projectsPayload.projects[0].id);
+      if (projectsResponse.ok) {
+        const projectsPayload = (await projectsResponse.json()) as { projects: LessonProject[] };
+        setProjects(projectsPayload.projects);
+        setDatabaseStatus(null);
+
+        if (projectsPayload.projects.length > 0) {
+          setSelectedProjectId((current) => current ?? projectsPayload.projects[0].id);
+        }
+      } else {
+        const payload = (await projectsResponse.json().catch(() => null)) as { message?: string } | null;
+        setProjects([]);
+        setSelectedProjectId(null);
+        setSelectedProject(null);
+        setDatabaseStatus(payload?.message ?? "Database is not reachable.");
       }
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unknown dashboard error.");
@@ -232,6 +243,12 @@ export function Dashboard() {
         {error ? (
           <div className="rounded-md border border-[#d77a61] bg-[#fff7f4] px-4 py-3 text-sm text-[#8a321f]">
             {error}
+          </div>
+        ) : null}
+
+        {databaseStatus ? (
+          <div className="rounded-md border border-[#d7aa61] bg-[#fffaf0] px-4 py-3 text-sm text-[#7a4b10]">
+            {databaseStatus}
           </div>
         ) : null}
 

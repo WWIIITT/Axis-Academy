@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { databaseUnavailableResponse } from "@/lib/api-errors";
 import { getCurrentTeacherId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createWorkflowEventSchema } from "@/lib/validation";
@@ -26,29 +27,33 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  const project = await prisma.lessonProject.findFirst({
-    where: {
-      id,
-      teacherId
-    },
-    select: {
-      id: true
-    }
-  });
+  try {
+    const project = await prisma.lessonProject.findFirst({
+      where: {
+        id,
+        teacherId
+      },
+      select: {
+        id: true
+      }
+    });
 
-  if (!project) {
-    return NextResponse.json({ error: "Lesson project not found." }, { status: 404 });
+    if (!project) {
+      return NextResponse.json({ error: "Lesson project not found." }, { status: 404 });
+    }
+
+    const workflowEvent = await prisma.workflowEvent.create({
+      data: {
+        lessonProjectId: project.id,
+        eventType: parsed.data.eventType,
+        message: parsed.data.message,
+        teacherVisible: parsed.data.teacherVisible,
+        metadata: parsed.data.metadata as Prisma.InputJsonObject
+      }
+    });
+
+    return NextResponse.json({ workflowEvent }, { status: 201 });
+  } catch (error) {
+    return databaseUnavailableResponse(error);
   }
-
-  const workflowEvent = await prisma.workflowEvent.create({
-    data: {
-      lessonProjectId: project.id,
-      eventType: parsed.data.eventType,
-      message: parsed.data.message,
-      teacherVisible: parsed.data.teacherVisible,
-      metadata: parsed.data.metadata as Prisma.InputJsonObject
-    }
-  });
-
-  return NextResponse.json({ workflowEvent }, { status: 201 });
 }

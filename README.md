@@ -80,10 +80,77 @@ Generate the Prisma client:
 npm run prisma:generate
 ```
 
+Prisma also requires PostgreSQL to be running before the app can read or write lesson projects. The default local connection is:
+
+```text
+localhost:5432
+```
+
+If the dashboard shows that the database is unavailable, start PostgreSQL and confirm `DATABASE_URL` in `.env`.
+
+### PostgreSQL with Docker
+
+The recommended local setup is Docker:
+
+```powershell
+docker run --name axis-academy-postgres `
+  -e POSTGRES_PASSWORD=postgres `
+  -e POSTGRES_DB=axis_academy `
+  -p 5432:5432 `
+  -d postgres:16
+```
+
+If the container already exists but is stopped:
+
+```powershell
+docker start axis-academy-postgres
+```
+
+Check that PostgreSQL is running:
+
+```powershell
+docker ps --filter "name=axis-academy-postgres"
+```
+
+On Windows, stop the Next.js development server before running Prisma commands. A running dev server can keep Prisma's query engine DLL open and cause an `EPERM: operation not permitted, rename ... query_engine-windows.dll.node` error.
+
+To check for repository-related Node processes:
+
+```powershell
+Get-CimInstance Win32_Process |
+  Where-Object { $_.Name -in @('node.exe','cmd.exe') -and $_.CommandLine -like '*Axis-Academy*' } |
+  Select-Object ProcessId,Name,CommandLine
+```
+
+Stop only the matching Axis Academy processes before rerunning Prisma:
+
+```powershell
+Stop-Process -Id <PROCESS_ID> -Force
+npm run prisma:generate
+```
+
 Run migrations after PostgreSQL is available and `DATABASE_URL` is valid:
 
 ```powershell
 npm run prisma:migrate
+```
+
+For the first migration, Prisma will ask:
+
+```text
+Enter a name for the new migration:
+```
+
+Use:
+
+```text
+init
+```
+
+After the migration completes, start the development server:
+
+```powershell
+npm run dev
 ```
 
 ## Development
@@ -103,6 +170,16 @@ http://localhost:3000
 If port `3000` is already in use, Next.js will choose another port.
 
 ## Validation
+
+Use this clean validation order:
+
+```powershell
+npm run prisma:generate
+npm run lint
+npm run build
+```
+
+Start `npm run dev` only after those commands pass.
 
 Run lint:
 
@@ -148,5 +225,3 @@ Activate it on Windows PowerShell:
 ```powershell
 .\.venv\Scripts\Activate.ps1
 ```
-
-No Python dependencies are required for Milestone 1. The current `.venv/` can run Python, but `pip` is not available because the local Python `ensurepip` bootstrap failed. Add or repair `pip` before introducing Python package dependencies.

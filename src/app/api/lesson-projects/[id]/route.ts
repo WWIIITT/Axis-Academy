@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { databaseUnavailableResponse } from "@/lib/api-errors";
 import { getCurrentTeacherId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
@@ -12,38 +13,42 @@ export async function GET(_request: Request, context: RouteContext) {
   const teacherId = getCurrentTeacherId();
   const { id } = await context.params;
 
-  const project = await prisma.lessonProject.findFirst({
-    where: {
-      id,
-      teacherId
-    },
-    include: {
-      sourceDocuments: {
-        orderBy: {
-          createdAt: "desc"
-        }
+  try {
+    const project = await prisma.lessonProject.findFirst({
+      where: {
+        id,
+        teacherId
       },
-      agentTasks: {
-        orderBy: {
-          createdAt: "desc"
-        }
-      },
-      workflowEvents: {
-        orderBy: {
-          createdAt: "desc"
-        }
-      },
-      artifacts: {
-        orderBy: {
-          updatedAt: "desc"
+      include: {
+        sourceDocuments: {
+          orderBy: {
+            createdAt: "desc"
+          }
+        },
+        agentTasks: {
+          orderBy: {
+            createdAt: "desc"
+          }
+        },
+        workflowEvents: {
+          orderBy: {
+            createdAt: "desc"
+          }
+        },
+        artifacts: {
+          orderBy: {
+            updatedAt: "desc"
+          }
         }
       }
+    });
+
+    if (!project) {
+      return NextResponse.json({ error: "Lesson project not found." }, { status: 404 });
     }
-  });
 
-  if (!project) {
-    return NextResponse.json({ error: "Lesson project not found." }, { status: 404 });
+    return NextResponse.json({ project });
+  } catch (error) {
+    return databaseUnavailableResponse(error);
   }
-
-  return NextResponse.json({ project });
 }
