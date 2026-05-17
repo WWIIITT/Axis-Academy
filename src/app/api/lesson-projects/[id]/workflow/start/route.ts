@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import { AgentTaskStatus, WorkflowEventType } from "@prisma/client";
 import { databaseUnavailableResponse } from "@/lib/api-errors";
 import { getCurrentTeacherId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { startProjectManagerWorkflow } from "@/lib/orchestration/runtime";
+import { createInitialWorkflowState } from "@/lib/orchestration/runtime";
+import { markAgentTaskStatus, writeWorkflowEvent } from "@/lib/orchestration/dispatcher";
 
 type RouteContext = {
   params: Promise<{
@@ -21,7 +23,12 @@ export async function POST(_request: Request, context: RouteContext) {
         teacherId
       },
       select: {
-        id: true
+        id: true,
+        sourceDocuments: {
+          select: {
+            id: true
+          }
+        }
       }
     });
 
@@ -29,13 +36,42 @@ export async function POST(_request: Request, context: RouteContext) {
       return NextResponse.json({ error: "Lesson project not found." }, { status: 404 });
     }
 
-    const result = await startProjectManagerWorkflow(project.id);
+    const task = await prisma.agentTask.create({
+      data: {
+        lessonProjectId: project.id,
+        agentName: "project-manager",
+        status: AgentTaskStatus.QUEUED,
+        inputArtifactIds: [],
+        outputArtifactIds: [],
+        warnings: []
+      }
+    });
+
+    await writeWorkflowEvent({
+      lessonProjectId: project.id,
+      agentTaskId: task.id,
+      eventType: WorkflowEventType.AGENT_QUEUED,
+      message: "Project Manager workflow started.",
+      teacherVisible: true,
+      metadata: {
+        agentId: "project-manager",
+        sourceDocumentCount: project.sourceDocuments.length
+      }
+    });
+
+    await markAgentTaskStatus(task.id, AgentTaskStatus.RUNNING);
 
     return NextResponse.json(
       {
-        workflowState: result.workflowState,
-        workflowEventIds: result.workflowEventIds,
-        taskId: result.taskId
+        workflowState: {
+          ...createInitialWorkflowState(project.id),
+          currentAgent: "project-manager",
+          currentTaskId: task.id,
+          taskStatuses: {
+            [task.id]: "running"
+          }
+        },
+        taskId: task.id
       },
       { status: 201 }
     );
