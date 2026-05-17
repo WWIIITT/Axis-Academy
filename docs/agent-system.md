@@ -145,7 +145,19 @@ Milestone 4 adds a deterministic correctness gate before teacher acceptance:
 - Passing reviews create a `REVIEW_REPORT` artifact and move the project to `NEEDS_TEACHER_REVIEW`.
 - Reviewers may use `source_citation_lookup`, `structured_output_validator`, `rubric_scorer`, and `workflow_event_writer` only when those tools are allowed in the agent catalog.
 
-## 9. Skill Pack Guidance
+## 9. Milestone 5 Teacher Review UI
+
+Milestone 5 adds the teacher approval loop:
+
+- Teachers can inspect generated artifacts and review report summaries.
+- Teachers can edit artifact JSON content directly in the dashboard.
+- Artifact edits increment version, mark the artifact as `NEEDS_REVISION`, and create a `TEACHER_ACTION` workflow event.
+- Teachers can approve individual artifacts, which sets `reviewStatus` to `APPROVED`.
+- Teachers can request selected regeneration; the Project Manager receives a `NEEDS_REVISION` task with the artifact or section context.
+- Final acceptance requires required lesson artifacts to exist and be approved, with no blocked review report.
+- Final acceptance creates a `FINAL_PACKAGE` artifact and moves the project to `APPROVED`.
+
+## 10. Skill Pack Guidance
 
 - Keep `SKILL.md` short and operational.
 - Put long references in `references/`.

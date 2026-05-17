@@ -130,6 +130,17 @@ Done when:
 - The teacher can request local regeneration.
 - The teacher can finish final acceptance.
 
+Implemented scope:
+
+- Dashboard shows teacher review status, artifact approval progress, and agent task status summary.
+- Teachers can preview generated lesson artifacts.
+- Teachers can edit artifact JSON content; edits increment artifact version and mark the artifact as needing revision.
+- Teachers can approve individual artifacts.
+- Teachers can request selected regeneration for a whole artifact or named section.
+- Teachers can complete final acceptance after required artifacts exist and are approved.
+- Final acceptance creates a `FINAL_PACKAGE` artifact and moves the project to `APPROVED`.
+- Teacher actions are written as `TEACHER_ACTION` workflow events.
+
 ## 7. Milestone 6: Evaluation Harness
 
 Goals:

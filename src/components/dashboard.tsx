@@ -119,6 +119,13 @@ export function Dashboard() {
   const [workflowStartMessage, setWorkflowStartMessage] = useState("");
   const [workflowAdvanceMessage, setWorkflowAdvanceMessage] = useState("");
   const [workflowReviewMessage, setWorkflowReviewMessage] = useState("");
+  const [teacherReviewMessage, setTeacherReviewMessage] = useState("");
+  const [editingArtifactId, setEditingArtifactId] = useState<string | null>(null);
+  const [artifactDraft, setArtifactDraft] = useState("");
+  const [regenerateArtifactId, setRegenerateArtifactId] = useState("");
+  const [regenerateSectionLabel, setRegenerateSectionLabel] = useState("");
+  const [regenerateReason, setRegenerateReason] = useState("");
+  const [finalAcceptanceNote, setFinalAcceptanceNote] = useState("");
   const [sourceText, setSourceText] = useState("");
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [sourceInputType, setSourceInputType] = useState<"TEXT" | "PDF" | "PPTX">("TEXT");
@@ -132,6 +139,24 @@ export function Dashboard() {
     }
 
     return `${selectedProject.title} · ${selectedProject.status}`;
+  }, [selectedProject]);
+
+  const reviewableArtifacts = useMemo(() => {
+    const reviewableTypes = new Set(["LESSON_SUMMARY", "EXAMPLES", "QUESTIONS", "SLIDE_CONTENT", "SLIDE_OUTLINE"]);
+
+    return selectedProject?.artifacts.filter((artifact) => reviewableTypes.has(artifact.type)) ?? [];
+  }, [selectedProject]);
+
+  const agentStatusSummary = useMemo(() => {
+    const statuses = new Map<string, number>();
+
+    for (const task of selectedProject?.agentTasks ?? []) {
+      statuses.set(task.status, (statuses.get(task.status) ?? 0) + 1);
+    }
+
+    return Array.from(statuses.entries())
+      .map(([status, count]) => `${status}: ${count}`)
+      .join(", ") || "No agent tasks";
   }, [selectedProject]);
 
   async function loadInitialData() {
@@ -412,6 +437,151 @@ export function Dashboard() {
       await loadInitialData();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unknown review gate error.");
+    }
+  }
+
+  function beginArtifactEdit(artifact: Artifact) {
+    setEditingArtifactId(artifact.id);
+    setArtifactDraft(JSON.stringify(artifact.contentJson, null, 2));
+    setTeacherReviewMessage("");
+  }
+
+  async function saveArtifactEdit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedProjectId || !editingArtifactId) {
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const parsedContent = JSON.parse(artifactDraft) as unknown;
+      const response = await fetch(`/api/lesson-projects/${selectedProjectId}/artifacts/${editingArtifactId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          contentJson: parsedContent,
+          note: "Edited from teacher review UI."
+        })
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Unable to save artifact edit.");
+      }
+
+      setTeacherReviewMessage("Artifact edit saved.");
+      setEditingArtifactId(null);
+      setArtifactDraft("");
+      await loadSelectedProject(selectedProjectId);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unknown artifact edit error.");
+    }
+  }
+
+  async function approveArtifact(artifactId: string) {
+    if (!selectedProjectId) {
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/lesson-projects/${selectedProjectId}/artifacts/${artifactId}/approve`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          note: "Approved from teacher review UI."
+        })
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Unable to approve artifact.");
+      }
+
+      setTeacherReviewMessage("Artifact approved.");
+      await loadSelectedProject(selectedProjectId);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unknown artifact approval error.");
+    }
+  }
+
+  async function requestRegeneration(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedProjectId || !regenerateSectionLabel.trim() || !regenerateReason.trim()) {
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const selectedArtifact = reviewableArtifacts.find((artifact) => artifact.id === regenerateArtifactId);
+      const response = await fetch(`/api/lesson-projects/${selectedProjectId}/regenerate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          artifactId: selectedArtifact?.id,
+          artifactType: selectedArtifact?.type,
+          sectionLabel: regenerateSectionLabel,
+          reason: regenerateReason
+        })
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Unable to request regeneration.");
+      }
+
+      setTeacherReviewMessage("Regeneration request recorded.");
+      setRegenerateSectionLabel("");
+      setRegenerateReason("");
+      await loadSelectedProject(selectedProjectId);
+      await loadInitialData();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unknown regeneration request error.");
+    }
+  }
+
+  async function completeFinalAcceptance(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedProjectId) {
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/lesson-projects/${selectedProjectId}/accept`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          note: finalAcceptanceNote || undefined
+        })
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Project is not ready for final acceptance.");
+      }
+
+      setTeacherReviewMessage("Final acceptance completed.");
+      setFinalAcceptanceNote("");
+      await loadSelectedProject(selectedProjectId);
+      await loadInitialData();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unknown final acceptance error.");
     }
   }
 
@@ -797,6 +967,162 @@ export function Dashboard() {
                 ) : null}
               </div>
             </section>
+
+            <section className="rounded-md border border-line bg-white p-5">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-lg font-semibold text-ink">Teacher review</h2>
+                <p className="text-sm text-[#5c6775]">
+                  Review artifacts, edit JSON content, approve sections, request regeneration, and finish acceptance.
+                </p>
+              </div>
+
+              {teacherReviewMessage ? (
+                <div className="mt-4 rounded-md border border-[#8bc5ba] bg-[#f1fbf8] px-4 py-3 text-sm text-[#1f7668]">
+                  {teacherReviewMessage}
+                </div>
+              ) : null}
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <StatusRow label="Project" value={selectedProject?.status ?? "No project"} />
+                <StatusRow label="Agent tasks" value={agentStatusSummary} />
+                <StatusRow
+                  label="Approved"
+                  value={`${reviewableArtifacts.filter((artifact) => artifact.reviewStatus === "APPROVED").length}/${reviewableArtifacts.length}`}
+                />
+              </div>
+
+              <div className="mt-5 flex flex-col gap-4">
+                {reviewableArtifacts.map((artifact) => (
+                  <article key={artifact.id} className="rounded-md border border-line bg-panel px-4 py-3">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div>
+                        <h3 className="text-sm font-semibold text-ink">
+                          {artifact.type} v{artifact.version}
+                        </h3>
+                        <p className="mt-1 text-xs text-[#687586]">{artifact.reviewStatus}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          className="rounded-md border border-line bg-white px-3 py-2 text-xs font-semibold text-[#314052] transition hover:border-[#258c7a]"
+                          type="button"
+                          onClick={() => beginArtifactEdit(artifact)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="rounded-md bg-[#258c7a] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#1f7668]"
+                          type="button"
+                          onClick={() => void approveArtifact(artifact.id)}
+                        >
+                          Approve
+                        </button>
+                      </div>
+                    </div>
+
+                    <ArtifactPreview content={artifact.contentJson} />
+
+                    {editingArtifactId === artifact.id ? (
+                      <form className="mt-4 flex flex-col gap-3" onSubmit={saveArtifactEdit}>
+                        <textarea
+                          className="min-h-56 rounded-md border border-line bg-white px-3 py-2 font-mono text-xs leading-5 outline-none focus:border-[#258c7a]"
+                          value={artifactDraft}
+                          onChange={(event) => setArtifactDraft(event.target.value)}
+                        />
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            className="rounded-md bg-[#258c7a] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#1f7668]"
+                            type="submit"
+                          >
+                            Save edit
+                          </button>
+                          <button
+                            className="rounded-md border border-line bg-white px-3 py-2 text-xs font-semibold text-[#314052] transition hover:border-[#258c7a]"
+                            type="button"
+                            onClick={() => {
+                              setEditingArtifactId(null);
+                              setArtifactDraft("");
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    ) : null}
+                  </article>
+                ))}
+                {selectedProject && reviewableArtifacts.length === 0 ? (
+                  <p className="rounded-md border border-line bg-panel px-4 py-5 text-sm text-[#5c6775]">
+                    No generated lesson artifacts are ready for teacher review.
+                  </p>
+                ) : null}
+              </div>
+
+              <form className="mt-6 rounded-md border border-line bg-panel px-4 py-3" onSubmit={requestRegeneration}>
+                <h3 className="text-sm font-semibold text-ink">Request selected regeneration</h3>
+                <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_1fr]">
+                  <label className="flex flex-col gap-2 text-sm font-medium text-[#314052]">
+                    Artifact
+                    <select
+                      className="rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-[#258c7a]"
+                      value={regenerateArtifactId}
+                      onChange={(event) => setRegenerateArtifactId(event.target.value)}
+                    >
+                      <option value="">Whole package or unknown artifact</option>
+                      {reviewableArtifacts.map((artifact) => (
+                        <option key={artifact.id} value={artifact.id}>
+                          {artifact.type} v{artifact.version}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-2 text-sm font-medium text-[#314052]">
+                    Section
+                    <input
+                      className="rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-[#258c7a]"
+                      value={regenerateSectionLabel}
+                      onChange={(event) => setRegenerateSectionLabel(event.target.value)}
+                      placeholder="Slide 3, question 2, examples section"
+                    />
+                  </label>
+                </div>
+                <label className="mt-3 flex flex-col gap-2 text-sm font-medium text-[#314052]">
+                  Reason
+                  <textarea
+                    className="min-h-24 rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-[#258c7a]"
+                    value={regenerateReason}
+                    onChange={(event) => setRegenerateReason(event.target.value)}
+                    placeholder="Explain what should be regenerated and why."
+                  />
+                </label>
+                <button
+                  className="mt-3 rounded-md bg-[#314052] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#253142] disabled:cursor-not-allowed disabled:bg-[#9aa4b1]"
+                  disabled={!selectedProjectId || !regenerateSectionLabel.trim() || !regenerateReason.trim()}
+                  type="submit"
+                >
+                  Request regeneration
+                </button>
+              </form>
+
+              <form className="mt-6 rounded-md border border-line bg-panel px-4 py-3" onSubmit={completeFinalAcceptance}>
+                <h3 className="text-sm font-semibold text-ink">Final acceptance</h3>
+                <label className="mt-3 flex flex-col gap-2 text-sm font-medium text-[#314052]">
+                  Acceptance note
+                  <textarea
+                    className="min-h-20 rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-[#258c7a]"
+                    value={finalAcceptanceNote}
+                    onChange={(event) => setFinalAcceptanceNote(event.target.value)}
+                    placeholder="Optional teacher note"
+                  />
+                </label>
+                <button
+                  className="mt-3 rounded-md bg-[#258c7a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1f7668] disabled:cursor-not-allowed disabled:bg-[#9aa4b1]"
+                  disabled={!selectedProjectId || reviewableArtifacts.length === 0}
+                  type="submit"
+                >
+                  Complete final acceptance
+                </button>
+              </form>
+            </section>
           </div>
         </section>
 
@@ -871,6 +1197,50 @@ function ReviewReportPreview({ content }: { content: unknown }) {
       <ReviewResultBlock title="Quality review" review={report.qualityReview} />
     </div>
   );
+}
+
+function ArtifactPreview({ content }: { content: unknown }) {
+  if (typeof content === "string") {
+    return <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-[#314052]">{content}</p>;
+  }
+
+  if (Array.isArray(content)) {
+    return (
+      <div className="mt-3 flex flex-col gap-2">
+        {content.slice(0, 5).map((item, index) => (
+          <div key={`artifact-array-item-${index}`} className="rounded-md border border-line bg-white px-3 py-2">
+            <p className="line-clamp-4 text-sm leading-6 text-[#314052]">{stringifyPreview(item)}</p>
+          </div>
+        ))}
+        {content.length > 5 ? <p className="text-xs text-[#687586]">{content.length - 5} more item(s)</p> : null}
+      </div>
+    );
+  }
+
+  if (content && typeof content === "object") {
+    const entries = Object.entries(content as Record<string, unknown>).slice(0, 6);
+
+    return (
+      <dl className="mt-3 grid gap-2">
+        {entries.map(([key, value]) => (
+          <div key={key} className="rounded-md border border-line bg-white px-3 py-2">
+            <dt className="text-xs font-semibold uppercase tracking-[0.08em] text-[#687586]">{key}</dt>
+            <dd className="mt-1 line-clamp-4 text-sm leading-6 text-[#314052]">{stringifyPreview(value)}</dd>
+          </div>
+        ))}
+      </dl>
+    );
+  }
+
+  return <p className="mt-3 text-sm text-[#5c6775]">No previewable content.</p>;
+}
+
+function stringifyPreview(value: unknown) {
+  if (typeof value === "string") {
+    return value;
+  }
+
+  return JSON.stringify(value);
 }
 
 function ReviewResultBlock({
