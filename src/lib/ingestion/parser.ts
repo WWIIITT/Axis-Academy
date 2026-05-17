@@ -1,10 +1,18 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { XMLParser } from "fast-xml-parser";
-import { PDFParse } from "pdf-parse";
 import JSZip from "jszip";
 import { chunkPdfPage, chunkPptSlide, chunkTextDocument } from "@/lib/ingestion/chunking";
 import { IngestionInputType, ParsedSourceDocument } from "@/lib/ingestion/types";
+
+const require = createRequire(import.meta.url);
+
+type PdfParseModule = {
+  PDFParse: new (options: { data: Buffer }) => {
+    getText: () => Promise<{ text: string }>;
+  };
+};
 
 function collectTextNodes(node: unknown, output: string[] = []) {
   if (typeof node === "string") {
@@ -32,6 +40,7 @@ function collectTextNodes(node: unknown, output: string[] = []) {
 }
 
 async function parsePdf(buffer: Buffer) {
+  const { PDFParse } = require("pdf-parse") as PdfParseModule;
   const parser = new PDFParse({ data: buffer });
   const result = await parser.getText();
   const pages = result.text
