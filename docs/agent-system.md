@@ -134,7 +134,18 @@ The Project Manager only accepts schema-valid output. If the schema is invalid, 
 9. Project Manager handles revision loops or prepares the teacher review package.
 10. Teacher reviews, edits, or requests local regeneration.
 
-## 8. Skill Pack Guidance
+## 8. Milestone 4 Review Gate
+
+Milestone 4 adds a deterministic correctness gate before teacher acceptance:
+
+- Slide Reviewer checks slide artifact presence, slide structure, pacing, clarity, coverage, and source references.
+- Quality Reviewer checks required package artifacts, groundedness, consistency, answer readiness, and unresolved warnings.
+- Blocking issues create `REVIEW_BLOCKED` workflow events and keep the project out of final teacher acceptance.
+- Non-blocking warnings create `REVIEW_WARNING` workflow events and remain visible to the teacher.
+- Passing reviews create a `REVIEW_REPORT` artifact and move the project to `NEEDS_TEACHER_REVIEW`.
+- Reviewers may use `source_citation_lookup`, `structured_output_validator`, `rubric_scorer`, and `workflow_event_writer` only when those tools are allowed in the agent catalog.
+
+## 9. Skill Pack Guidance
 
 - Keep `SKILL.md` short and operational.
 - Put long references in `references/`.

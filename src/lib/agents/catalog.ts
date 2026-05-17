@@ -139,13 +139,13 @@ export const agentCatalog: AgentSpec[] = [
     name: "Slide Reviewer",
     description: "Review slides for clarity, pacing, coverage, and source-grounded correctness.",
     skillIds: ["design-slides", "review-quality", "ground-claims"],
-    toolIds: ["source_citation_lookup", "rubric_scorer", "workflow_event_writer"]
+    toolIds: ["source_citation_lookup", "structured_output_validator", "rubric_scorer", "workflow_event_writer"]
   },
   {
     id: "quality-reviewer",
     name: "Quality Reviewer",
     description: "Review the full lesson package for coverage, groundedness, consistency, and blocking issues.",
     skillIds: ["review-quality", "ground-claims", "review-pedagogy"],
-    toolIds: ["source_citation_lookup", "rubric_scorer", "workflow_event_writer"]
+    toolIds: ["source_citation_lookup", "structured_output_validator", "rubric_scorer", "workflow_event_writer"]
   }
 ];

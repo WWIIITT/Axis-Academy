@@ -26,6 +26,12 @@ export type HandoffResult = {
   nextActions: string[];
 };
 
+export type SourceReference = {
+  sourceDocumentId: string;
+  chunkId: string;
+  note?: string;
+};
+
 export type ReviewResult = {
   reviewerName: string;
   status: "approved" | "needs_revision" | "blocked";
@@ -33,6 +39,8 @@ export type ReviewResult = {
   blockingIssues: string[];
   warnings: string[];
   rubricScores: Record<string, number>;
+  sourceReferences?: SourceReference[];
+  nextActions?: string[];
 };
 
 export type WorkflowState = {

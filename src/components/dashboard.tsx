@@ -17,6 +17,7 @@ type WorkflowEvent = {
   eventType: string;
   message: string;
   teacherVisible: boolean;
+  metadata?: unknown;
   createdAt: string;
 };
 
@@ -39,9 +40,28 @@ type SourceDocument = {
   sourceMapChunks: SourceMapChunk[];
 };
 
+type Artifact = {
+  id: string;
+  type: string;
+  reviewStatus: string;
+  version: number;
+  contentJson: unknown;
+  sourceReferences: unknown;
+  updatedAt: string;
+};
+
 type ProjectDetail = LessonProject & {
   sourceDocuments: SourceDocument[];
   workflowEvents: WorkflowEvent[];
+  agentTasks: Array<{
+    id: string;
+    agentName: string;
+    status: string;
+    warnings: unknown;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  artifacts: Artifact[];
 };
 
 type ProviderStatus = {
@@ -98,6 +118,7 @@ export function Dashboard() {
   const [eventMessage, setEventMessage] = useState("");
   const [workflowStartMessage, setWorkflowStartMessage] = useState("");
   const [workflowAdvanceMessage, setWorkflowAdvanceMessage] = useState("");
+  const [workflowReviewMessage, setWorkflowReviewMessage] = useState("");
   const [sourceText, setSourceText] = useState("");
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [sourceInputType, setSourceInputType] = useState<"TEXT" | "PDF" | "PPTX">("TEXT");
@@ -350,6 +371,47 @@ export function Dashboard() {
       await loadSelectedProject(selectedProjectId);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unknown workflow advance error.");
+    }
+  }
+
+  async function runReviewGate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedProjectId) {
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/lesson-projects/${selectedProjectId}/workflow/review`, {
+        method: "POST"
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Unable to run review gate.");
+      }
+
+      const payload = (await response.json()) as {
+        review: {
+          qualityReview: {
+            status: string;
+            blockingIssues: string[];
+            warnings: string[];
+          };
+        };
+      };
+
+      setWorkflowReviewMessage(
+        payload.review.qualityReview.status === "approved"
+          ? "Review gate passed."
+          : `Review gate needs attention: ${payload.review.qualityReview.blockingIssues.length} blocking issue(s), ${payload.review.qualityReview.warnings.length} warning(s).`
+      );
+      await loadSelectedProject(selectedProjectId);
+      await loadInitialData();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unknown review gate error.");
     }
   }
 
@@ -650,6 +712,17 @@ export function Dashboard() {
                 <p className="text-sm text-[#5c6775]">{workflowAdvanceMessage}</p>
               </form>
 
+              <form className="mt-3 flex flex-col gap-3 sm:flex-row" onSubmit={runReviewGate}>
+                <button
+                  className="rounded-md bg-[#7a4b10] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#623c0d] disabled:cursor-not-allowed disabled:bg-[#9aa4b1]"
+                  disabled={!selectedProjectId}
+                  type="submit"
+                >
+                  Run review gate
+                </button>
+                <p className="text-sm text-[#5c6775]">{workflowReviewMessage}</p>
+              </form>
+
               <form className="mt-4 flex flex-col gap-3 sm:flex-row" onSubmit={createWorkflowEvent}>
                 <input
                   className="min-w-0 flex-1 rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-[#258c7a]"
@@ -682,6 +755,44 @@ export function Dashboard() {
                 {selectedProject && selectedProject.workflowEvents.length === 0 ? (
                   <p className="rounded-md border border-line bg-panel px-4 py-5 text-sm text-[#5c6775]">
                     No workflow events have been recorded for this project.
+                  </p>
+                ) : null}
+              </div>
+            </section>
+
+            <section className="rounded-md border border-line bg-white p-5">
+              <h2 className="text-lg font-semibold text-ink">Review gate</h2>
+              <p className="mt-1 text-sm text-[#5c6775]">
+                Slide Reviewer and Quality Reviewer results from Milestone 4.
+              </p>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <StatusRow label="Artifacts" value={String(selectedProject?.artifacts.length ?? 0)} />
+                <StatusRow
+                  label="Reviewer tasks"
+                  value={String(
+                    selectedProject?.agentTasks.filter((task) =>
+                      ["slide-reviewer", "quality-reviewer"].includes(task.agentName)
+                    ).length ?? 0
+                  )}
+                />
+              </div>
+
+              <div className="mt-5 flex flex-col gap-3">
+                {selectedProject?.artifacts
+                  .filter((artifact) => artifact.type === "REVIEW_REPORT")
+                  .map((artifact) => (
+                    <article key={artifact.id} className="rounded-md border border-line bg-panel px-4 py-3">
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                        <h3 className="text-sm font-semibold text-ink">Review report v{artifact.version}</h3>
+                        <p className="text-xs text-[#687586]">{artifact.reviewStatus}</p>
+                      </div>
+                      <ReviewReportPreview content={artifact.contentJson} />
+                    </article>
+                  ))}
+                {selectedProject && !selectedProject.artifacts.some((artifact) => artifact.type === "REVIEW_REPORT") ? (
+                  <p className="rounded-md border border-line bg-panel px-4 py-5 text-sm text-[#5c6775]">
+                    No review report has been generated yet.
                   </p>
                 ) : null}
               </div>
@@ -731,6 +842,63 @@ export function Dashboard() {
         </section>
       </div>
     </main>
+  );
+}
+
+function ReviewReportPreview({ content }: { content: unknown }) {
+  if (!content || typeof content !== "object" || Array.isArray(content)) {
+    return <p className="mt-3 text-sm text-[#5c6775]">Review report content is not available.</p>;
+  }
+
+  const report = content as {
+    slideReview?: {
+      status?: string;
+      summary?: string;
+      blockingIssues?: string[];
+      warnings?: string[];
+    };
+    qualityReview?: {
+      status?: string;
+      summary?: string;
+      blockingIssues?: string[];
+      warnings?: string[];
+    };
+  };
+
+  return (
+    <div className="mt-3 grid gap-3">
+      <ReviewResultBlock title="Slide review" review={report.slideReview} />
+      <ReviewResultBlock title="Quality review" review={report.qualityReview} />
+    </div>
+  );
+}
+
+function ReviewResultBlock({
+  title,
+  review
+}: {
+  title: string;
+  review?: {
+    status?: string;
+    summary?: string;
+    blockingIssues?: string[];
+    warnings?: string[];
+  };
+}) {
+  return (
+    <div className="rounded-md border border-line bg-white px-3 py-2">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm font-semibold text-ink">{title}</p>
+        <p className="text-xs text-[#687586]">{review?.status ?? "unknown"}</p>
+      </div>
+      <p className="mt-2 text-sm leading-6 text-[#4d5967]">{review?.summary ?? "No summary."}</p>
+      {review?.blockingIssues?.length ? (
+        <p className="mt-2 text-xs text-[#8a321f]">Blocking issues: {review.blockingIssues.length}</p>
+      ) : null}
+      {review?.warnings?.length ? (
+        <p className="mt-1 text-xs text-[#7a4b10]">Warnings: {review.warnings.length}</p>
+      ) : null}
+    </div>
   );
 }
 

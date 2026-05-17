@@ -94,6 +94,7 @@ Goals:
 - Implement Slide Reviewer and Quality Reviewer.
 - Check coverage, groundedness, factual consistency, and warnings.
 - Let the Project Manager react to blocking reviewer issues.
+- Persist a review report artifact and show review status in the dashboard.
 
 Done when:
 
@@ -101,6 +102,17 @@ Done when:
 - Blocking issues stop final acceptance.
 - Non-blocking warnings are shown to the teacher.
 - The teacher review package includes a clean summary.
+
+Implemented scope:
+
+- `POST /api/lesson-projects/:id/workflow/review` runs the deterministic Milestone 4 review gate.
+- Slide Reviewer checks slide artifact presence, structure, source references, clarity, pacing, coverage, and groundedness.
+- Quality Reviewer checks required package artifacts, source grounding, consistency, teacher readiness, and unresolved warnings.
+- Review results are persisted as `REVIEW_REPORT` artifacts.
+- Blocking issues produce `REVIEW_BLOCKED` workflow events.
+- Non-blocking warnings produce `REVIEW_WARNING` workflow events.
+- Passing reviews move the project to `NEEDS_TEACHER_REVIEW`.
+- The dashboard can trigger the review gate and show review report summaries.
 
 ## 6. Milestone 5: Teacher Review UI
 

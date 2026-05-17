@@ -36,7 +36,9 @@ export const reviewResultSchema = z.object({
   summary: nonEmptyString,
   blockingIssues: z.array(nonEmptyString),
   warnings: z.array(nonEmptyString),
-  rubricScores: z.record(z.number())
+  rubricScores: z.record(z.number()),
+  sourceReferences: z.array(sourceReferenceSchema).default([]),
+  nextActions: z.array(nonEmptyString).default([])
 });
 
 export const agentOutputEnvelopeSchema = z.object({
