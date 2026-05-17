@@ -1,0 +1,176 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProjectStatus {
+  DRAFT
+  UPLOADED
+  PROCESSING
+  NEEDS_TEACHER_REVIEW
+  APPROVED
+  EXPORTED
+  FAILED
+}
+
+enum SourceType {
+  PDF
+  PPTX
+  TEXT
+}
+
+enum ParseStatus {
+  PENDING
+  PARSED
+  FAILED
+}
+
+enum AgentTaskStatus {
+  QUEUED
+  RUNNING
+  REVIEWING
+  COMPLETED
+  NEEDS_REVISION
+  FAILED
+}
+
+enum ArtifactType {
+  LESSON_SUMMARY
+  SLIDE_OUTLINE
+  SLIDE_CONTENT
+  EXAMPLES
+  QUESTIONS
+  REVIEW_REPORT
+  FINAL_PACKAGE
+}
+
+enum ReviewStatus {
+  DRAFT
+  PENDING_REVIEW
+  APPROVED
+  NEEDS_REVISION
+  BLOCKED
+}
+
+enum WorkflowEventType {
+  PROJECT_CREATED
+  SOURCE_ADDED
+  AGENT_QUEUED
+  AGENT_STARTED
+  AGENT_COMPLETED
+  AGENT_FAILED
+  REVIEW_WARNING
+  REVIEW_BLOCKED
+  TEACHER_ACTION
+  SYSTEM_INFO
+}
+
+model LessonProject {
+  id              String          @id @default(cuid())
+  teacherId       String
+  title           String
+  subject         String?
+  gradeLevel      String?
+  status          ProjectStatus   @default(DRAFT)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  sourceDocuments SourceDocument[]
+  agentTasks      AgentTask[]
+  workflowEvents  WorkflowEvent[]
+  artifacts       Artifact[]
+
+  @@index([teacherId])
+  @@index([status])
+}
+
+model SourceDocument {
+  id              String           @id @default(cuid())
+  lessonProjectId String
+  type            SourceType
+  fileUrl         String?
+  rawText         String?
+  parseStatus     ParseStatus      @default(PENDING)
+  parseWarnings   Json             @default("[]")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  lessonProject   LessonProject    @relation(fields: [lessonProjectId], references: [id], onDelete: Cascade)
+  sourceMapChunks SourceMapChunk[]
+
+  @@index([lessonProjectId])
+  @@index([parseStatus])
+}
+
+model SourceMapChunk {
+  id               String         @id @default(cuid())
+  sourceDocumentId String
+  chunkId          String
+  pageNumber       Int?
+  slideNumber      Int?
+  sectionTitle     String?
+  text             String
+  metadata         Json           @default("{}")
+  createdAt        DateTime       @default(now())
+  sourceDocument   SourceDocument @relation(fields: [sourceDocumentId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceDocumentId, chunkId])
+  @@index([sourceDocumentId])
+}
+
+model AgentTask {
+  id                String            @id @default(cuid())
+  lessonProjectId   String
+  agentName         String
+  status            AgentTaskStatus   @default(QUEUED)
+  inputArtifactIds  Json              @default("[]")
+  outputArtifactIds Json              @default("[]")
+  warnings          Json              @default("[]")
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  lessonProject     LessonProject     @relation(fields: [lessonProjectId], references: [id], onDelete: Cascade)
+  workflowEvents    WorkflowEvent[]
+
+  @@index([lessonProjectId])
+  @@index([agentName])
+  @@index([status])
+}
+
+model WorkflowEvent {
+  id              String            @id @default(cuid())
+  lessonProjectId String
+  agentTaskId     String?
+  eventType       WorkflowEventType @default(SYSTEM_INFO)
+  message         String
+  teacherVisible  Boolean           @default(true)
+  metadata        Json              @default("{}")
+  createdAt       DateTime          @default(now())
+  lessonProject   LessonProject     @relation(fields: [lessonProjectId], references: [id], onDelete: Cascade)
+  agentTask       AgentTask?        @relation(fields: [agentTaskId], references: [id], onDelete: SetNull)
+
+  @@index([lessonProjectId])
+  @@index([agentTaskId])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+model Artifact {
+  id               String         @id @default(cuid())
+  lessonProjectId  String
+  type             ArtifactType
+  contentJson      Json
+  sourceReferences Json           @default("[]")
+  reviewStatus     ReviewStatus   @default(DRAFT)
+  version          Int            @default(1)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  lessonProject    LessonProject  @relation(fields: [lessonProjectId], references: [id], onDelete: Cascade)
+
+  @@index([lessonProjectId])
+  @@index([type])
+  @@index([reviewStatus])
+}
