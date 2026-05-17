@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { educationLevels, getEducationLevelLabel } from "@/lib/education-levels";
 
 type LessonProject = {
   id: string;
@@ -279,12 +280,31 @@ export function Dashboard() {
                 </label>
                 <label className="flex flex-col gap-2 text-sm font-medium text-[#314052]">
                   Grade level
-                  <input
+                  <select
                     className="rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-[#258c7a]"
                     value={gradeLevel}
                     onChange={(event) => setGradeLevel(event.target.value)}
-                    placeholder="Grade 9"
-                  />
+                  >
+                    <option value="">Select HKDSE or HKQF level</option>
+                    <optgroup label="HKDSE">
+                      {educationLevels
+                        .filter((level) => level.framework === "HKDSE")
+                        .map((level) => (
+                          <option key={level.value} value={level.value}>
+                            {level.label}
+                          </option>
+                        ))}
+                    </optgroup>
+                    <optgroup label="Hong Kong Qualifications Framework">
+                      {educationLevels
+                        .filter((level) => level.framework === "HKQF")
+                        .map((level) => (
+                          <option key={level.value} value={level.value}>
+                            {level.label}
+                          </option>
+                        ))}
+                    </optgroup>
+                  </select>
                 </label>
                 <button
                   className="rounded-md bg-[#258c7a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1f7668]"
@@ -338,7 +358,12 @@ export function Dashboard() {
                     {projects.map((project) => (
                       <tr key={project.id} className="border-t border-line">
                         <td className="px-3 py-2">{project.title}</td>
-                        <td className="px-3 py-2">{project.subject ?? "Not set"}</td>
+                        <td className="px-3 py-2">
+                          {project.subject ?? "Not set"}
+                          <span className="mt-1 block text-xs text-[#687586]">
+                            {getEducationLevelLabel(project.gradeLevel)}
+                          </span>
+                        </td>
                         <td className="px-3 py-2">{project.status}</td>
                       </tr>
                     ))}

@@ -204,6 +204,11 @@ npm run build
 
 The provider status endpoint does not return the API key.
 
+Lesson project `gradeLevel` values are constrained to Hong Kong education levels:
+
+- HKDSE: `hkdse_s4`, `hkdse_s5`, `hkdse_s6`
+- Hong Kong Qualifications Framework: `hkqf_level_1` through `hkqf_level_7`
+
 ## Documentation
 
 Project planning documents are in `docs/`:

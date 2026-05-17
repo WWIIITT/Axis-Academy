@@ -1,5 +1,6 @@
 import { WorkflowEventType } from "@prisma/client";
 import { z } from "zod";
+import { educationLevelValues } from "@/lib/education-levels";
 
 const jsonValueSchema: z.ZodType<
   string | number | boolean | null | Record<string, unknown> | unknown[]
@@ -17,7 +18,7 @@ const jsonValueSchema: z.ZodType<
 export const createLessonProjectSchema = z.object({
   title: z.string().trim().min(2).max(160),
   subject: z.string().trim().max(80).optional(),
-  gradeLevel: z.string().trim().max(80).optional()
+  gradeLevel: z.enum([educationLevelValues[0], ...educationLevelValues.slice(1)]).optional()
 });
 
 export const createWorkflowEventSchema = z.object({
