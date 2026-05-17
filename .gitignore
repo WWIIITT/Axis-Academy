@@ -10,6 +10,7 @@ dev-server.log
 .env*.local
 
 uploads/
+evaluation-reports/
 prisma/dev.db
 
 venv

@@ -89,6 +89,44 @@ type AgentCatalog = {
   tools: Array<{ id: string; name: string; description: string }>;
 };
 
+type EvaluationMetricKey =
+  | "sourceCoverage"
+  | "groundedness"
+  | "factualConsistency"
+  | "exampleQuality"
+  | "questionQuality"
+  | "slideQuality"
+  | "reviewerAccuracy";
+
+type EvaluationScores = Record<EvaluationMetricKey, number>;
+
+type EvaluationReport = {
+  runId: string;
+  createdAt: string;
+  metadata: {
+    modelName: string | null;
+    providerConfigured: boolean;
+    promptVersion: string;
+    workflowVersion: string;
+    sampleCount: number;
+  };
+  thresholds: EvaluationScores;
+  aggregateScores: EvaluationScores;
+  passed: boolean;
+  sampleResults: Array<{
+    sampleId: string;
+    title: string;
+    scores: EvaluationScores;
+    passed: boolean;
+    failures: Array<{
+      metric: EvaluationMetricKey;
+      score: number;
+      threshold: number;
+    }>;
+    notes: string[];
+  }>;
+};
+
 const emptyProviderStatus: ProviderStatus = {
   configured: false,
   baseUrlConfigured: false,
@@ -126,6 +164,8 @@ export function Dashboard() {
   const [regenerateSectionLabel, setRegenerateSectionLabel] = useState("");
   const [regenerateReason, setRegenerateReason] = useState("");
   const [finalAcceptanceNote, setFinalAcceptanceNote] = useState("");
+  const [evaluationReport, setEvaluationReport] = useState<EvaluationReport | null>(null);
+  const [evaluationMessage, setEvaluationMessage] = useState("");
   const [sourceText, setSourceText] = useState("");
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [sourceInputType, setSourceInputType] = useState<"TEXT" | "PDF" | "PPTX">("TEXT");
@@ -582,6 +622,27 @@ export function Dashboard() {
       await loadInitialData();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unknown final acceptance error.");
+    }
+  }
+
+  async function runEvaluation(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+
+    try {
+      const response = await fetch("/api/evaluation/run", {
+        method: "POST"
+      });
+
+      if (!response.ok) {
+        throw new Error("Unable to run evaluation harness.");
+      }
+
+      const payload = (await response.json()) as { report: EvaluationReport };
+      setEvaluationReport(payload.report);
+      setEvaluationMessage(payload.report.passed ? "Evaluation passed." : "Evaluation found regressions.");
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unknown evaluation error.");
     }
   }
 
@@ -1165,6 +1226,74 @@ export function Dashboard() {
               ))}
             </div>
           </div>
+        </section>
+
+        <section className="rounded-md border border-line bg-white p-5">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-ink">Evaluation harness</h2>
+              <p className="mt-1 max-w-3xl text-sm leading-6 text-[#5c6775]">
+                Deterministic regression checks for source coverage, groundedness, examples, questions, slides, and reviewer accuracy.
+              </p>
+            </div>
+            <form onSubmit={runEvaluation}>
+              <button
+                className="rounded-md bg-[#314052] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#253142]"
+                type="submit"
+              >
+                Run evaluation
+              </button>
+            </form>
+          </div>
+
+          {evaluationMessage ? (
+            <div className="mt-4 rounded-md border border-line bg-panel px-4 py-3 text-sm text-[#4d5967]">
+              {evaluationMessage}
+            </div>
+          ) : null}
+
+          {evaluationReport ? (
+            <div className="mt-5 grid gap-5">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <StatusRow label="Run" value={evaluationReport.runId} />
+                <StatusRow label="Result" value={evaluationReport.passed ? "Passed" : "Failed"} />
+                <StatusRow label="Samples" value={String(evaluationReport.metadata.sampleCount)} />
+                <StatusRow label="Workflow" value={evaluationReport.metadata.workflowVersion} />
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {Object.entries(evaluationReport.aggregateScores).map(([metric, score]) => (
+                  <div key={metric} className="rounded-md border border-line bg-panel px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#687586]">{metric}</p>
+                    <p className="mt-2 text-xl font-semibold text-ink">{score.toFixed(2)}</p>
+                    <p className="mt-1 text-xs text-[#687586]">
+                      Threshold {evaluationReport.thresholds[metric as EvaluationMetricKey].toFixed(2)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid gap-3 lg:grid-cols-2">
+                {evaluationReport.sampleResults.map((sample) => (
+                  <article key={sample.sampleId} className="rounded-md border border-line bg-panel px-4 py-3">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                      <h3 className="text-sm font-semibold text-ink">{sample.title}</h3>
+                      <p className="text-xs text-[#687586]">{sample.passed ? "Passed" : "Failed"}</p>
+                    </div>
+                    {sample.notes.length ? (
+                      <ul className="mt-3 list-disc pl-5 text-sm leading-6 text-[#7a4b10]">
+                        {sample.notes.map((note) => (
+                          <li key={`${sample.sampleId}-${note}`}>{note}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="mt-3 text-sm text-[#4d5967]">No metric failures.</p>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </section>
       </div>
     </main>

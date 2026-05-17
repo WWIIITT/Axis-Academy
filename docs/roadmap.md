@@ -157,6 +157,15 @@ Done when:
 - Reports record model, provider, prompt version, and workflow version.
 - Changes below threshold are flagged.
 
+Implemented scope:
+
+- Fixed deterministic evaluation samples are defined in `src/lib/evaluation/samples.ts`.
+- Harness scoring logic is implemented in `src/lib/evaluation/harness.ts`.
+- `GET/POST /api/evaluation/run` returns a regression report.
+- Dashboard includes an Evaluation harness panel with aggregate scores and sample failures.
+- `npm run eval` calls the local API and writes `evaluation-reports/latest.json`.
+- Reports include provider/model readiness, prompt version, workflow version, thresholds, aggregate scores, and per-sample failures.
+
 ## 8. Milestone 7: Export Preparation
 
 Goals:

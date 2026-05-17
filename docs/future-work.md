@@ -47,12 +47,12 @@ This document lists work that should be done later, but should not be implemente
 
 ## Milestone 6: Evaluation Harness
 
-- Add fixed sample teaching materials.
-- Add human-authored rubrics for each sample.
-- Build repeatable evaluation runs for agent workflows.
-- Score source coverage, groundedness, factual consistency, example quality, question quality, slide quality, and reviewer accuracy.
-- Store model, provider, prompt version, workflow version, and score metadata.
-- Produce regression reports before prompt, model, or orchestration changes are accepted.
+- Persist historical evaluation reports for trend comparison.
+- Run the full live agent pipeline on fixed samples instead of only deterministic candidate outputs.
+- Add human-authored rubrics for more subjects and levels.
+- Add provider and per-agent model comparison.
+- Add reviewer fault injection for hallucination, unsupported claims, and wrong answers.
+- Add expert adjudication workflow for ambiguous failures.
 
 ## Milestone 7: Export Preparation
 
