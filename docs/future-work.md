@@ -1,6 +1,6 @@
 # Future Work
 
-This document lists work that should be done later, but should not be implemented in the current Milestone 1 scope.
+This document lists work that should be done later, but should not be implemented in the current milestone scope.
 
 ## Milestone 2: Document Ingestion
 
@@ -15,9 +15,9 @@ This document lists work that should be done later, but should not be implemente
 
 ## Milestone 3: Agent Pipeline MVP
 
-- Implement the Manager orchestration service.
+- Implement the Project Manager orchestration service.
 - Implement agent execution boundaries for Document Analyst, Subject Teacher, Content Designer, Example Designer, Question Designer, and Slide Designer.
-- Convert the Milestone 1 agent skills/tools registry into executable skill and tool call contracts.
+- Convert the Milestone 1 agent skills/tools registry into executable skill packs and tool call contracts.
 - Add a tool dispatcher with per-agent tool permissions.
 - Record tool calls, tool inputs, tool outputs, failures, and timings.
 - Add structured output schemas for every agent.

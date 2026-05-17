@@ -57,10 +57,12 @@ type ProviderStatus = {
 };
 
 type AgentCatalog = {
+  mcpServerName: string;
   agents: Array<{
     id: string;
     name: string;
     description: string;
+    skillPackPath: string;
     skills: string[];
     tools: string[];
   }>;
@@ -85,11 +87,17 @@ export function Dashboard() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<ProjectDetail | null>(null);
   const [providerStatus, setProviderStatus] = useState<ProviderStatus>(emptyProviderStatus);
-  const [catalog, setCatalog] = useState<AgentCatalog>({ agents: [], skills: [], tools: [] });
+  const [catalog, setCatalog] = useState<AgentCatalog>({
+    mcpServerName: "",
+    agents: [],
+    skills: [],
+    tools: []
+  });
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
   const [gradeLevel, setGradeLevel] = useState("");
   const [eventMessage, setEventMessage] = useState("");
+  const [workflowStartMessage, setWorkflowStartMessage] = useState("");
   const [sourceText, setSourceText] = useState("");
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [sourceInputType, setSourceInputType] = useState<"TEXT" | "PDF" | "PPTX">("TEXT");
@@ -281,6 +289,32 @@ export function Dashboard() {
       await loadSelectedProject(selectedProjectId);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unknown event error.");
+    }
+  }
+
+  async function startWorkflow(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedProjectId) {
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/lesson-projects/${selectedProjectId}/workflow/start`, {
+        method: "POST"
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Unable to start workflow.");
+      }
+
+      setWorkflowStartMessage("Workflow started.");
+      await loadSelectedProject(selectedProjectId);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unknown workflow error.");
     }
   }
 
@@ -559,6 +593,17 @@ export function Dashboard() {
             <section className="rounded-md border border-line bg-white p-5">
               <h2 className="text-lg font-semibold text-ink">Workflow trace</h2>
 
+              <form className="mt-4 flex flex-col gap-3 sm:flex-row" onSubmit={startWorkflow}>
+                <button
+                  className="rounded-md bg-[#258c7a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1f7668] disabled:cursor-not-allowed disabled:bg-[#9aa4b1]"
+                  disabled={!selectedProjectId}
+                  type="submit"
+                >
+                  Start Project Manager
+                </button>
+                <p className="text-sm text-[#5c6775]">{workflowStartMessage}</p>
+              </form>
+
               <form className="mt-4 flex flex-col gap-3 sm:flex-row" onSubmit={createWorkflowEvent}>
                 <input
                   className="min-w-0 flex-1 rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-[#258c7a]"
@@ -602,14 +647,18 @@ export function Dashboard() {
           <div className="flex flex-col gap-1">
             <h2 className="text-lg font-semibold text-ink">Agent catalog</h2>
             <p className="text-sm text-[#5c6775]">
-              Static registry for Milestone 1. Agent execution starts in a later milestone.
+              Static registry for Milestone 1. Milestone 3 adds executable orchestration.
             </p>
+          </div>
+          <div className="mt-4 rounded-md border border-line bg-panel px-4 py-3 text-sm text-[#4d5967]">
+            MCP server: {catalog.mcpServerName}
           </div>
           <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {catalog.agents.map((agent) => (
               <article key={agent.id} className="rounded-md border border-line p-4">
                 <h3 className="text-base font-semibold text-ink">{agent.name}</h3>
                 <p className="mt-2 text-sm leading-6 text-[#4d5967]">{agent.description}</p>
+                <p className="mt-3 text-xs text-[#687586]">{agent.skillPackPath}</p>
                 <div className="mt-4">
                   <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#687586]">Skills</p>
                   <p className="mt-2 text-sm leading-6 text-[#314052]">{agent.skills.join(", ")}</p>

@@ -1,184 +1,184 @@
 # Axis Academy MVP Roadmap
 
-## 1. Roadmap 原則
+## 1. Roadmap Overview
 
-MVP 的目標是先完成一條可用、可審核、可評測的 teacher workflow：老師建立 lesson project、上傳或貼上教材，系統解析內容，agent pipeline 生成 slides/examples/questions，reviewer 檢查正確性，最後由老師審批。
+The MVP goal is to complete a usable teacher workflow: create a lesson project, add source materials, parse them into traceable chunks, generate lesson assets, review correctness, and let the teacher approve the final package.
 
-第一版不應優先投入學生端、多租戶、LMS 整合、複雜 provider routing 或外部 fact-checking。這些功能應在核心 teacher workflow 穩定後再加入。
+The first release does not include student features, LMS integration, multi-tenant school accounts, provider routing, or external fact-checking. Those will come later after the core teacher workflow is stable.
 
-## 2. Milestone 1：專案基礎與資料模型
+## 2. Milestone 1: Foundation and Data Model
 
-目標：
+Goals:
 
-- 建立 Next.js full-stack 專案。
-- 建立 lesson project、source document、source map、agent task、workflow event 和 artifact 資料模型。
-- 建立 server-side provider config。
-- 建立 development teacher stub。
-- 建立 agent catalog、skills catalog 和 tools catalog。
+- Build the Next.js full-stack project.
+- Build the lesson project, source document, source map, agent task, workflow event, and artifact data model.
+- Build server-side provider config.
+- Build the development teacher stub.
+- Build the agent catalog, skills catalog, and tools catalog.
 
-完成標準：
+Done when:
 
-- 老師可以建立 lesson project。
-- 系統可以保存 project metadata。
-- API key 只在 server-side 使用。
-- workflow event 可以被寫入和讀取。
-- `/api/agents/catalog` 可以回傳 agent、skills、tools metadata。
+- A teacher can create a lesson project.
+- The system can save project metadata.
+- API keys are only used server-side.
+- Workflow events can be written and read.
+- `/api/agents/catalog` returns agent, skills, and tools metadata.
 
-明確不做：
+Not done:
 
-- 不執行 agent。
-- 不呼叫 LLM。
-- 不執行 tool calls。
-- 不做 PDF/PPTX parsing。
-- 不生成教學內容。
+- No agent execution.
+- No LLM calls.
+- No tool calls.
+- No PDF/PPTX parsing.
+- No teaching content generation.
 
-Milestone 1 的 agent skills/tools 只是 registry，用來讓 UI 和後續 orchestration 有穩定定義。
+Milestone 1 keeps agent skills and tools as registry metadata only.
 
-## 3. Milestone 2：Document Ingestion
+## 3. Milestone 2: Document Ingestion
 
-目標：
+Goals:
 
-- 支援 PDF、PPTX 和 pasted text。
-- 將教材解析成可處理 text。
-- 將 text 切成 traceable chunks。
-- 建立 source map。
-- 顯示 parsing warnings。
+- Support PDF, PPTX, and pasted text.
+- Extract text from teaching materials.
+- Split text into traceable chunks.
+- Build source maps.
+- Show parsing warnings.
 
-完成標準：
+Done when:
 
-- 老師可以上傳或貼上教材。
-- 系統能取得可處理文本。
-- 每個 chunk 有來源位置，例如 page、slide、section 或 paragraph。
-- 解析失敗會顯示可理解錯誤。
-- Document parsing 和 text chunking tools 具備可被 Milestone 3 agent 呼叫的介面。
+- A teacher can upload or paste teaching material.
+- The system can extract usable text.
+- Each chunk keeps page, slide, section, or paragraph references.
+- Parsing failures are shown clearly.
+- Document parsing and text chunking can later be called by Milestone 3 agents through a tool interface.
 
-明確不做：
+Not done:
 
-- 不設計完整 agent prompt。
-- 不執行 multi-agent workflow。
-- 不生成 slides/examples/questions。
+- No full agent prompts.
+- No multi-agent workflow.
+- No generated slides, examples, or questions.
 
-Milestone 2 的重點是把 ingestion tools 做成可重用能力，讓 Milestone 3 可以由 agents 透過 tool calls 使用。
+Milestone 2 makes ingestion tools reusable for Milestone 3.
 
-## 4. Milestone 3：Agent Pipeline MVP
+## 4. Milestone 3: Agent Pipeline MVP
 
-目標：
+Goals:
 
-- 實作 Manager orchestration。
-- 實作 Document Analyst、Subject Teacher、Content Designer、Example Designer、Question Designer 和 Slide Designer。
-- 將 Milestone 1 的 agent skills/tools registry 轉成可執行設計。
-- 定義 agent prompt contract、tool call contract 和 structured output schemas。
-- 讓 Manager 能串接完整 pipeline。
+- Implement Project Manager orchestration.
+- Implement Document Analyst, Subject Teacher, Content Designer, Example Designer, Question Designer, and Slide Designer.
+- Turn the Milestone 1 registry into executable skill packs and tool contracts.
+- Define agent prompt contracts, tool call contracts, and structured output schemas.
+- Let the Project Manager run a complete pipeline.
 
-完成標準：
+Done when:
 
-- 一份教材能產生 lesson summary、examples、questions 和 slide content。
-- 每個 agent task 都會產生 workflow event。
-- 每個 agent output 使用 structured schema。
-- 每個 tool call 都有 input/output schema、執行狀態和錯誤處理。
-- 生成內容包含 source references 或 derived content 標記。
-- Agent output validation 失敗時能重試或標記錯誤。
+- One teaching material can produce lesson summary, examples, questions, and slide content.
+- Every agent task emits workflow events.
+- Every agent output uses a structured schema.
+- Every tool call has input and output schema, retry handling, and validation.
+- Generated content includes source references or derived-content markers.
+- Output validation can trigger retry or regeneration.
 
-Milestone 3 必須設計和實作：
+Milestone 3 requires:
 
-- Executable agent skills：每個 skill 如何影響 prompt、tool access、output schema 和 quality gate。
-- Tool dispatcher：統一執行 tools，記錄 tool call result。
-- Tool permissions：每個 agent 只能呼叫被授權的 tools。
-- Manager handoff：agent output 如何進入下一個 agent。
-- Provider adapter usage：agent 透過 provider adapter 呼叫 OpenAI-compatible API。
+- Executable skills: how each skill affects prompt, tool access, output schema, and quality gate.
+- Tool dispatcher: run tools centrally and record tool call results.
+- Tool permissions: each agent can only call authorized tools.
+- Handoff rules: how agent output enters the next agent.
+- Provider adapter usage: agent calls use OpenAI-compatible API through the provider adapter.
 
-## 5. Milestone 4：Review 與 Correctness Gate
+## 5. Milestone 4: Review and Correctness Gate
 
-目標：
+Goals:
 
-- 實作 Slide Reviewer 和 Quality Reviewer。
-- 檢查 coverage、groundedness、factual consistency 和 warnings。
-- Manager 根據 reviewer 結果標記 blocking issues。
+- Implement Slide Reviewer and Quality Reviewer.
+- Check coverage, groundedness, factual consistency, and warnings.
+- Let the Project Manager react to blocking reviewer issues.
 
-完成標準：
+Done when:
 
-- Reviewer report 能指出缺少來源、覆蓋不足或內容矛盾。
-- Blocking issue 會阻止 final acceptance。
-- Non-blocking warning 會顯示給老師。
-- Teacher review package 包含清楚摘要。
+- Reviewer reports can point out missing references, weak coverage, or contradictions.
+- Blocking issues stop final acceptance.
+- Non-blocking warnings are shown to the teacher.
+- The teacher review package includes a clean summary.
 
-## 6. Milestone 5：Teacher Review UI
+## 6. Milestone 5: Teacher Review UI
 
-目標：
+Goals:
 
-- 建立 live workflow trace UI。
-- 顯示 agent 狀態、進度、review warnings 和 teacher-facing summaries。
-- 支援 approve、edit、regenerate selected section 和 final acceptance。
+- Build live workflow trace UI.
+- Show agent status, progress, review warnings, and teacher-facing summaries.
+- Support approve, edit, regenerate selected section, and final acceptance.
 
-完成標準：
+Done when:
 
-- 老師能看到每個 agent 的狀態。
-- 老師能查看生成的 slides/examples/questions。
-- 老師能修改內容。
-- 老師能局部重生指定 section。
-- 老師能完成 final acceptance。
+- The teacher can see each agent state.
+- The teacher can review generated slides, examples, and questions.
+- The teacher can edit content.
+- The teacher can request local regeneration.
+- The teacher can finish final acceptance.
 
-## 7. Milestone 6：Evaluation Harness
+## 7. Milestone 6: Evaluation Harness
 
-目標：
+Goals:
 
-- 建立固定教材樣本。
-- 定義 sample rubrics。
-- 自動執行 agent workflow。
-- 評估 coverage、groundedness、example quality、question quality、slide quality 和 reviewer accuracy。
+- Build fixed teaching material samples.
+- Define sample rubrics.
+- Run the agent workflow repeatedly.
+- Score coverage, groundedness, example quality, question quality, slide quality, and reviewer accuracy.
 
-完成標準：
+Done when:
 
-- 能在固定 samples 上重跑 pipeline。
-- 能輸出 regression report。
-- Report 記錄 model、provider、prompt version 和 workflow version。
-- 低於門檻的改動會被標記。
+- The pipeline can be rerun on fixed samples.
+- A regression report can be generated.
+- Reports record model, provider, prompt version, and workflow version.
+- Changes below threshold are flagged.
 
-## 8. Milestone 7：Export Preparation
+## 8. Milestone 7: Export Preparation
 
-目標：
+Goals:
 
-- 整理 final accepted lesson package。
-- 支援匯出為 structured JSON 或 Markdown。
-- 為後續 PPTX export 保留資料結構。
+- Organize the final accepted lesson package.
+- Support structured JSON and Markdown export.
+- Keep the data structure ready for later PPTX export.
 
-完成標準：
+Done when:
 
-- 老師 final acceptance 後能取得完整 lesson package。
-- Export 包含 lesson summary、slides、examples、questions 和 review metadata。
-- Export 不包含 API key、raw provider response 或 internal debug data。
+- Final acceptance can produce a complete lesson package.
+- The export includes lesson summary, slides, examples, questions, and review metadata.
+- Export does not include API keys, raw provider responses, or internal debug data.
 
-## 9. MVP 後續版本
+## 9. Later Versions
 
-可在 MVP 穩定後加入：
+Possible future additions after the MVP:
 
-- 學生端練習和答題。
-- LMS 整合。
-- PPTX export。
-- External fact-checking。
-- Multi-provider fallback。
-- Per-agent model routing。
-- Subject-specific rubrics。
-- School-level account management。
-- Advanced analytics。
+- Student practice portal.
+- LMS integration.
+- PPTX export.
+- External fact-checking.
+- Multi-provider fallback.
+- Per-agent model routing.
+- Subject-specific rubrics.
+- School-level account management.
+- Advanced analytics.
 
-## 10. 近期實作順序
+## 10. Near-Term Order
 
-推薦順序：
+Recommended implementation order:
 
-1. 完成 Next.js 專案與基礎資料模型。
-2. 完成 provider adapter 和 structured output validation。
-3. 完成 PDF/PPTX/text ingestion。
-4. 將 ingestion tools 接成可被 agent 呼叫的 tool interface。
-5. 實作 Manager 和前三個 agent。
-6. 加入 examples、questions 和 slides generation。
-7. 加入 reviewer agents。
-8. 建立 teacher review UI。
-9. 建立 evaluation harness。
-10. 加入 export preparation。
+1. Finish Next.js foundation and data model.
+2. Finish provider adapter and structured output validation.
+3. Finish PDF/PPTX/text ingestion.
+4. Connect ingestion tools to agent tool calls.
+5. Implement Project Manager and the first three specialist agents.
+6. Add examples, questions, and slides generation.
+7. Add reviewer agents.
+8. Build teacher review UI.
+9. Build evaluation harness.
+10. Add export preparation.
 
-核心分界：
+Core boundaries:
 
-- Milestone 1：定義 agent/skill/tool metadata。
-- Milestone 2：實作 ingestion tools。
-- Milestone 3：實作可執行 agents、skills 和 tool calls。
+- Milestone 1: agent/skill/tool metadata.
+- Milestone 2: ingestion tools.
+- Milestone 3: executable agents, skills, and tool calls.
