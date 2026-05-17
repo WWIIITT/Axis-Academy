@@ -20,7 +20,27 @@ type WorkflowEvent = {
   createdAt: string;
 };
 
+type SourceMapChunk = {
+  id: string;
+  chunkId: string;
+  pageNumber: number | null;
+  slideNumber: number | null;
+  sectionTitle: string | null;
+  text: string;
+};
+
+type SourceDocument = {
+  id: string;
+  type: string;
+  fileUrl: string | null;
+  rawText: string | null;
+  parseStatus: string;
+  parseWarnings: string[];
+  sourceMapChunks: SourceMapChunk[];
+};
+
 type ProjectDetail = LessonProject & {
+  sourceDocuments: SourceDocument[];
   workflowEvents: WorkflowEvent[];
 };
 
@@ -70,6 +90,9 @@ export function Dashboard() {
   const [subject, setSubject] = useState("");
   const [gradeLevel, setGradeLevel] = useState("");
   const [eventMessage, setEventMessage] = useState("");
+  const [sourceText, setSourceText] = useState("");
+  const [sourceFile, setSourceFile] = useState<File | null>(null);
+  const [sourceInputType, setSourceInputType] = useState<"TEXT" | "PDF" | "PPTX">("TEXT");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [databaseStatus, setDatabaseStatus] = useState<string | null>(null);
@@ -175,6 +198,58 @@ export function Dashboard() {
     }
   }
 
+  async function submitSource(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedProjectId) {
+      return;
+    }
+
+    setError(null);
+
+    try {
+      let response: Response;
+
+      if (sourceInputType === "TEXT") {
+        response = await fetch(`/api/lesson-projects/${selectedProjectId}/sources`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            type: "TEXT",
+            rawText: sourceText
+          })
+        });
+      } else {
+        if (!sourceFile) {
+          throw new Error("Please choose a file before uploading.");
+        }
+
+        const formData = new FormData();
+        formData.append("inputType", sourceInputType);
+        formData.append("file", sourceFile);
+
+        response = await fetch(`/api/lesson-projects/${selectedProjectId}/sources`, {
+          method: "POST",
+          body: formData
+        });
+      }
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Unable to upload source.");
+      }
+
+      setSourceText("");
+      setSourceFile(null);
+      await loadSelectedProject(selectedProjectId);
+      await loadInitialData();
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unknown source upload error.");
+    }
+  }
+
   async function createWorkflowEvent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -230,10 +305,10 @@ export function Dashboard() {
               Axis Academy
             </p>
             <h1 className="mt-2 text-3xl font-semibold tracking-normal text-ink">
-              Milestone 1 dashboard
+              Milestone 2 dashboard
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[#4d5967]">
-              Project metadata, provider readiness, agent skills, agent tools, and workflow trace foundations.
+              Project metadata, provider readiness, ingestion, source documents, source chunks, and workflow trace foundations.
             </p>
           </div>
           <div className="rounded-md border border-line bg-white px-4 py-3 text-sm text-[#4d5967]">
@@ -253,7 +328,7 @@ export function Dashboard() {
           </div>
         ) : null}
 
-        <section className="grid gap-6 lg:grid-cols-[minmax(300px,380px)_1fr]">
+        <section className="grid gap-6 lg:grid-cols-[minmax(340px,420px)_1fr]">
           <div className="flex flex-col gap-6">
             <form className="rounded-md border border-line bg-white p-5" onSubmit={createProject}>
               <h2 className="text-lg font-semibold text-ink">Create lesson project</h2>
@@ -325,6 +400,58 @@ export function Dashboard() {
                 <StatusRow label="Retries" value={String(providerStatus.maxRetries)} />
               </div>
             </section>
+
+            <section className="rounded-md border border-line bg-white p-5">
+              <h2 className="text-lg font-semibold text-ink">Add source</h2>
+              <p className="mt-1 text-sm text-[#5c6775]">
+                Upload PDF/PPTX or paste text. Maximum file size: 25MB.
+              </p>
+
+              <form className="mt-4 flex flex-col gap-4" onSubmit={submitSource}>
+                <label className="flex flex-col gap-2 text-sm font-medium text-[#314052]">
+                  Source type
+                  <select
+                    className="rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-[#258c7a]"
+                    value={sourceInputType}
+                    onChange={(event) => setSourceInputType(event.target.value as "TEXT" | "PDF" | "PPTX")}
+                  >
+                    <option value="TEXT">Text</option>
+                    <option value="PDF">PDF</option>
+                    <option value="PPTX">PPTX</option>
+                  </select>
+                </label>
+
+                {sourceInputType === "TEXT" ? (
+                  <label className="flex flex-col gap-2 text-sm font-medium text-[#314052]">
+                    Paste text
+                    <textarea
+                      className="min-h-36 rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-[#258c7a]"
+                      value={sourceText}
+                      onChange={(event) => setSourceText(event.target.value)}
+                      placeholder="Paste teaching material here"
+                    />
+                  </label>
+                ) : (
+                  <label className="flex flex-col gap-2 text-sm font-medium text-[#314052]">
+                    Upload file
+                    <input
+                      className="rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-[#258c7a]"
+                      type="file"
+                      accept={sourceInputType === "PDF" ? ".pdf,application/pdf" : ".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation"}
+                      onChange={(event) => setSourceFile(event.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                )}
+
+                <button
+                  className="rounded-md bg-[#258c7a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1f7668] disabled:cursor-not-allowed disabled:bg-[#9aa4b1]"
+                  type="submit"
+                  disabled={!selectedProjectId}
+                >
+                  Save source
+                </button>
+              </form>
+            </section>
           </div>
 
           <div className="flex flex-col gap-6">
@@ -380,8 +507,57 @@ export function Dashboard() {
             </section>
 
             <section className="rounded-md border border-line bg-white p-5">
-              <h2 className="text-lg font-semibold text-ink">Workflow trace</h2>
+              <h2 className="text-lg font-semibold text-ink">Source documents</h2>
               <p className="mt-1 text-sm text-[#5c6775]">{selectedProjectLabel}</p>
+
+              <div className="mt-4 flex flex-col gap-3">
+                {selectedProject?.sourceDocuments.map((sourceDocument) => (
+                  <div key={sourceDocument.id} className="rounded-md border border-line bg-panel px-4 py-3">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm font-semibold text-ink">{sourceDocument.type}</p>
+                      <p className="text-xs text-[#687586]">
+                        {sourceDocument.parseStatus} · {sourceDocument.sourceMapChunks.length} chunks
+                      </p>
+                    </div>
+                    {sourceDocument.parseWarnings.length ? (
+                      <ul className="mt-2 list-disc pl-5 text-sm text-[#7a4b10]">
+                        {sourceDocument.parseWarnings.map((warning, index) => (
+                          <li key={`${sourceDocument.id}-warning-${index}`}>{warning}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {sourceDocument.sourceMapChunks.length ? (
+                      <details className="mt-3">
+                        <summary className="cursor-pointer text-sm font-medium text-[#314052]">
+                          Preview chunks
+                        </summary>
+                        <div className="mt-3 flex flex-col gap-2">
+                          {sourceDocument.sourceMapChunks.map((chunk) => (
+                            <div key={chunk.id} className="rounded-md border border-line bg-white px-3 py-2">
+                              <div className="flex flex-wrap gap-2 text-xs text-[#687586]">
+                                <span>{chunk.chunkId}</span>
+                                {chunk.pageNumber !== null ? <span>page {chunk.pageNumber}</span> : null}
+                                {chunk.slideNumber !== null ? <span>slide {chunk.slideNumber}</span> : null}
+                              </div>
+                              <p className="mt-2 text-sm leading-6 text-[#314052]">{chunk.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    ) : null}
+                    {sourceDocument.rawText ? <p className="mt-3 text-xs text-[#687586]">Raw text captured.</p> : null}
+                  </div>
+                ))}
+                {selectedProject && selectedProject.sourceDocuments.length === 0 ? (
+                  <p className="rounded-md border border-line bg-panel px-4 py-5 text-sm text-[#5c6775]">
+                    No source documents have been uploaded for this project.
+                  </p>
+                ) : null}
+              </div>
+            </section>
+
+            <section className="rounded-md border border-line bg-white p-5">
+              <h2 className="text-lg font-semibold text-ink">Workflow trace</h2>
 
               <form className="mt-4 flex flex-col gap-3 sm:flex-row" onSubmit={createWorkflowEvent}>
                 <input

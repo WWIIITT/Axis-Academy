@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { databaseUnavailableResponse } from "@/lib/api-errors";
 import { getCurrentTeacherId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { createLessonProjectSchema } from "@/lib/validation";
+import { createLessonProjectSchema } from "@/lib/schemas/source-upload";
 
 export async function GET() {
   const teacherId = getCurrentTeacherId();

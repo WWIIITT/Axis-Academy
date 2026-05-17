@@ -23,6 +23,13 @@ export async function GET(_request: Request, context: RouteContext) {
         sourceDocuments: {
           orderBy: {
             createdAt: "desc"
+          },
+          include: {
+            sourceMapChunks: {
+              orderBy: {
+                createdAt: "asc"
+              }
+            }
           }
         },
         agentTasks: {
