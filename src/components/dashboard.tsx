@@ -175,10 +175,10 @@ export function Dashboard() {
 
   const selectedProjectLabel = useMemo(() => {
     if (!selectedProject) {
-      return "No project selected";
+      return "Choose or create a lesson project to begin.";
     }
 
-    return `${selectedProject.title} · ${selectedProject.status}`;
+    return `${selectedProject.title} - ${formatStatusLabel(selectedProject.status)}`;
   }, [selectedProject]);
 
   const reviewableArtifacts = useMemo(() => {
@@ -191,7 +191,8 @@ export function Dashboard() {
     const statuses = new Map<string, number>();
 
     for (const task of selectedProject?.agentTasks ?? []) {
-      statuses.set(task.status, (statuses.get(task.status) ?? 0) + 1);
+      const status = formatStatusLabel(task.status);
+      statuses.set(status, (statuses.get(status) ?? 0) + 1);
     }
 
     return Array.from(statuses.entries())
@@ -206,6 +207,32 @@ export function Dashboard() {
           selectedProject.artifacts.some((artifact) => artifact.type === "FINAL_PACKAGE"))
     );
   }, [selectedProject]);
+
+  const workspaceSteps = useMemo(
+    () => [
+      {
+        label: "Project",
+        complete: Boolean(selectedProject),
+        detail: selectedProject ? formatStatusLabel(selectedProject.status) : "Not selected"
+      },
+      {
+        label: "Materials",
+        complete: Boolean(selectedProject?.sourceDocuments.length),
+        detail: `${selectedProject?.sourceDocuments.length ?? 0} source${selectedProject?.sourceDocuments.length === 1 ? "" : "s"}`
+      },
+      {
+        label: "Review",
+        complete: reviewableArtifacts.some((artifact) => artifact.reviewStatus === "APPROVED"),
+        detail: `${reviewableArtifacts.filter((artifact) => artifact.reviewStatus === "APPROVED").length}/${reviewableArtifacts.length} approved`
+      },
+      {
+        label: "Export",
+        complete: exportReady,
+        detail: exportReady ? "Ready" : "Waiting"
+      }
+    ],
+    [exportReady, reviewableArtifacts, selectedProject]
+  );
 
   async function loadInitialData() {
     setIsLoading(true);
@@ -478,8 +505,8 @@ export function Dashboard() {
 
       setWorkflowReviewMessage(
         payload.review.qualityReview.status === "approved"
-          ? "Review gate passed."
-          : `Review gate needs attention: ${payload.review.qualityReview.blockingIssues.length} blocking issue(s), ${payload.review.qualityReview.warnings.length} warning(s).`
+          ? "Quality check passed."
+          : `Quality check needs attention: ${payload.review.qualityReview.blockingIssues.length} blocking issue(s), ${payload.review.qualityReview.warnings.length} warning(s).`
       );
       await loadSelectedProject(selectedProjectId);
       await loadInitialData();
@@ -675,14 +702,17 @@ export function Dashboard() {
               Axis Academy
             </p>
             <h1 className="mt-2 text-3xl font-semibold tracking-normal text-ink">
-              Milestone 2 dashboard
+              Lesson Studio
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[#4d5967]">
-              Project metadata, provider readiness, ingestion, source documents, source chunks, and workflow trace foundations.
+              Create source-grounded lesson materials, review AI outputs, and export a teacher-ready package.
             </p>
           </div>
-          <div className="rounded-md border border-line bg-white px-4 py-3 text-sm text-[#4d5967]">
-            {isLoading ? "Loading system state..." : `${projects.length} project${projects.length === 1 ? "" : "s"}`}
+          <div className="grid gap-2 rounded-md border border-line bg-white px-4 py-3 text-sm text-[#4d5967]">
+            <span>{isLoading ? "Loading workspace..." : `${projects.length} project${projects.length === 1 ? "" : "s"}`}</span>
+            <span className="font-medium text-ink">
+              {providerStatus.configured ? "AI connected" : "AI setup incomplete"}
+            </span>
           </div>
         </header>
 
@@ -698,10 +728,27 @@ export function Dashboard() {
           </div>
         ) : null}
 
+        <section className="grid gap-3 md:grid-cols-4">
+          {workspaceSteps.map((step, index) => (
+            <div key={step.label} className="rounded-md border border-line bg-white px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#687586]">
+                  {index + 1}. {step.label}
+                </p>
+                <span
+                  className={`h-2.5 w-2.5 rounded-full ${step.complete ? "bg-[#258c7a]" : "bg-[#c6ccd6]"}`}
+                  aria-label={step.complete ? "Complete" : "Incomplete"}
+                />
+              </div>
+              <p className="mt-2 text-sm font-medium text-ink">{step.detail}</p>
+            </div>
+          ))}
+        </section>
+
         <section className="grid gap-6 lg:grid-cols-[minmax(340px,420px)_1fr]">
           <div className="flex flex-col gap-6">
             <form className="rounded-md border border-line bg-white p-5" onSubmit={createProject}>
-              <h2 className="text-lg font-semibold text-ink">Create lesson project</h2>
+              <h2 className="text-lg font-semibold text-ink">New lesson project</h2>
               <div className="mt-5 flex flex-col gap-4">
                 <label className="flex flex-col gap-2 text-sm font-medium text-[#314052]">
                   Title
@@ -761,7 +808,7 @@ export function Dashboard() {
             </form>
 
             <section className="rounded-md border border-line bg-white p-5">
-              <h2 className="text-lg font-semibold text-ink">Provider status</h2>
+              <h2 className="text-lg font-semibold text-ink">AI connection</h2>
               <div className="mt-4 grid gap-3 text-sm">
                 <StatusRow label="Configured" value={providerStatus.configured ? "Ready" : "Incomplete"} />
                 <StatusRow label="Base URL" value={providerStatus.baseUrlConfigured ? "Set" : "Missing"} />
@@ -772,9 +819,9 @@ export function Dashboard() {
             </section>
 
             <section className="rounded-md border border-line bg-white p-5">
-              <h2 className="text-lg font-semibold text-ink">Add source</h2>
+              <h2 className="text-lg font-semibold text-ink">Add teaching material</h2>
               <p className="mt-1 text-sm text-[#5c6775]">
-                Upload PDF/PPTX or paste text. Maximum file size: 25MB.
+                Upload PDF/PPTX files or paste text for the lesson source map.
               </p>
 
               <form className="mt-4 flex flex-col gap-4" onSubmit={submitSource}>
@@ -827,7 +874,7 @@ export function Dashboard() {
           <div className="flex flex-col gap-6">
             <section className="rounded-md border border-line bg-white p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h2 className="text-lg font-semibold text-ink">Lesson projects</h2>
+                <h2 className="text-lg font-semibold text-ink">Projects</h2>
                 <select
                   className="rounded-md border border-line px-3 py-2 text-sm outline-none focus:border-[#258c7a]"
                   value={selectedProjectId ?? ""}
@@ -861,13 +908,13 @@ export function Dashboard() {
                             {getEducationLevelLabel(project.gradeLevel)}
                           </span>
                         </td>
-                        <td className="px-3 py-2">{project.status}</td>
+                        <td className="px-3 py-2">{formatStatusLabel(project.status)}</td>
                       </tr>
                     ))}
                     {projects.length === 0 ? (
                       <tr>
                         <td className="px-3 py-5 text-[#5c6775]" colSpan={3}>
-                          No lesson projects yet.
+                          No projects yet. Create one to start preparing a lesson package.
                         </td>
                       </tr>
                     ) : null}
@@ -877,7 +924,7 @@ export function Dashboard() {
             </section>
 
             <section className="rounded-md border border-line bg-white p-5">
-              <h2 className="text-lg font-semibold text-ink">Source documents</h2>
+              <h2 className="text-lg font-semibold text-ink">Teaching materials</h2>
               <p className="mt-1 text-sm text-[#5c6775]">{selectedProjectLabel}</p>
 
               <div className="mt-4 flex flex-col gap-3">
@@ -886,7 +933,7 @@ export function Dashboard() {
                     <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm font-semibold text-ink">{sourceDocument.type}</p>
                       <p className="text-xs text-[#687586]">
-                        {sourceDocument.parseStatus} · {sourceDocument.sourceMapChunks.length} chunks
+                        {formatStatusLabel(sourceDocument.parseStatus)} - {sourceDocument.sourceMapChunks.length} chunks
                       </p>
                     </div>
                     {sourceDocument.parseWarnings.length ? (
@@ -915,19 +962,19 @@ export function Dashboard() {
                         </div>
                       </details>
                     ) : null}
-                    {sourceDocument.rawText ? <p className="mt-3 text-xs text-[#687586]">Raw text captured.</p> : null}
+                    {sourceDocument.rawText ? <p className="mt-3 text-xs text-[#687586]">Text saved for source grounding.</p> : null}
                   </div>
                 ))}
                 {selectedProject && selectedProject.sourceDocuments.length === 0 ? (
                   <p className="rounded-md border border-line bg-panel px-4 py-5 text-sm text-[#5c6775]">
-                    No source documents have been uploaded for this project.
+                    No teaching materials have been added to this project yet.
                   </p>
                 ) : null}
               </div>
             </section>
 
             <section className="rounded-md border border-line bg-white p-5">
-              <h2 className="text-lg font-semibold text-ink">Workflow trace</h2>
+              <h2 className="text-lg font-semibold text-ink">AI workflow</h2>
 
               <form className="mt-4 flex flex-col gap-3 sm:flex-row" onSubmit={startWorkflow}>
                 <button
@@ -935,7 +982,7 @@ export function Dashboard() {
                   disabled={!selectedProjectId}
                   type="submit"
                 >
-                  Start Project Manager
+                  Start AI workflow
                 </button>
                 <p className="text-sm text-[#5c6775]">{workflowStartMessage}</p>
               </form>
@@ -946,7 +993,7 @@ export function Dashboard() {
                   disabled={!selectedProjectId}
                   type="submit"
                 >
-                  Advance workflow
+                  Advance next step
                 </button>
                 <p className="text-sm text-[#5c6775]">{workflowAdvanceMessage}</p>
               </form>
@@ -957,7 +1004,7 @@ export function Dashboard() {
                   disabled={!selectedProjectId}
                   type="submit"
                 >
-                  Run review gate
+                  Check quality
                 </button>
                 <p className="text-sm text-[#5c6775]">{workflowReviewMessage}</p>
               </form>
@@ -968,7 +1015,7 @@ export function Dashboard() {
                   disabled={!selectedProjectId}
                   value={eventMessage}
                   onChange={(event) => setEventMessage(event.target.value)}
-                  placeholder="Add a milestone event"
+                  placeholder="Add a teacher note"
                 />
                 <button
                   className="rounded-md bg-[#314052] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#253142] disabled:cursor-not-allowed disabled:bg-[#9aa4b1]"
@@ -1000,9 +1047,9 @@ export function Dashboard() {
             </section>
 
             <section className="rounded-md border border-line bg-white p-5">
-              <h2 className="text-lg font-semibold text-ink">Review gate</h2>
+              <h2 className="text-lg font-semibold text-ink">Quality check</h2>
               <p className="mt-1 text-sm text-[#5c6775]">
-                Slide Reviewer and Quality Reviewer results from Milestone 4.
+                Review coverage, grounding, slide clarity, and blocking issues before teacher approval.
               </p>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -1024,7 +1071,7 @@ export function Dashboard() {
                     <article key={artifact.id} className="rounded-md border border-line bg-panel px-4 py-3">
                       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                         <h3 className="text-sm font-semibold text-ink">Review report v{artifact.version}</h3>
-                        <p className="text-xs text-[#687586]">{artifact.reviewStatus}</p>
+                        <p className="text-xs text-[#687586]">{formatStatusLabel(artifact.reviewStatus)}</p>
                       </div>
                       <ReviewReportPreview content={artifact.contentJson} />
                     </article>
@@ -1039,9 +1086,9 @@ export function Dashboard() {
 
             <section className="rounded-md border border-line bg-white p-5">
               <div className="flex flex-col gap-1">
-                <h2 className="text-lg font-semibold text-ink">Teacher review</h2>
+                <h2 className="text-lg font-semibold text-ink">Review lesson package</h2>
                 <p className="text-sm text-[#5c6775]">
-                  Review artifacts, edit JSON content, approve sections, request regeneration, and finish acceptance.
+                  Review generated sections, make edits, approve content, or request targeted regeneration.
                 </p>
               </div>
 
@@ -1068,7 +1115,7 @@ export function Dashboard() {
                         <h3 className="text-sm font-semibold text-ink">
                           {artifact.type} v{artifact.version}
                         </h3>
-                        <p className="mt-1 text-xs text-[#687586]">{artifact.reviewStatus}</p>
+                        <p className="mt-1 text-xs text-[#687586]">{formatStatusLabel(artifact.reviewStatus)}</p>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <button
@@ -1121,7 +1168,7 @@ export function Dashboard() {
                 ))}
                 {selectedProject && reviewableArtifacts.length === 0 ? (
                   <p className="rounded-md border border-line bg-panel px-4 py-5 text-sm text-[#5c6775]">
-                    No generated lesson artifacts are ready for teacher review.
+                    No generated lesson sections are ready for review yet.
                   </p>
                 ) : null}
               </div>
@@ -1195,9 +1242,9 @@ export function Dashboard() {
 
             <section className="rounded-md border border-line bg-white p-5">
               <div className="flex flex-col gap-1">
-                <h2 className="text-lg font-semibold text-ink">Export preparation</h2>
+                <h2 className="text-lg font-semibold text-ink">Export</h2>
                 <p className="text-sm text-[#5c6775]">
-                  Export the final accepted lesson package as structured JSON or Markdown.
+                  Download the accepted lesson package for handoff or later presentation export.
                 </p>
               </div>
 
@@ -1239,15 +1286,18 @@ export function Dashboard() {
           </div>
         </section>
 
-        <section className="rounded-md border border-line bg-white p-5">
-          <div className="flex flex-col gap-1">
-            <h2 className="text-lg font-semibold text-ink">Agent catalog</h2>
-            <p className="text-sm text-[#5c6775]">
-              Worker profiles are separate from reusable skill packs and MCP tool permissions.
-            </p>
-          </div>
-          <div className="mt-4 rounded-md border border-line bg-panel px-4 py-3 text-sm text-[#4d5967]">
-            MCP server: {catalog.mcpServerName}
+        <details className="rounded-md border border-line bg-white p-5">
+          <summary className="cursor-pointer text-lg font-semibold text-ink">System setup</summary>
+          <p className="mt-2 text-sm text-[#5c6775]">
+            Specialist agents, reusable skills, tool permissions, and regression checks for maintainers.
+          </p>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <div className="rounded-md border border-line bg-panel px-4 py-3 text-sm text-[#4d5967]">
+              Tool server: {catalog.mcpServerName}
+            </div>
+            <div className="rounded-md border border-line bg-panel px-4 py-3 text-sm text-[#4d5967]">
+              Quality checks: {evaluationReport ? (evaluationReport.passed ? "Passed" : "Needs attention") : "Not run"}
+            </div>
           </div>
           <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {catalog.agents.map((agent) => (
@@ -1259,7 +1309,7 @@ export function Dashboard() {
                   <p className="mt-2 text-sm leading-6 text-[#314052]">{agent.skillIds.join(", ")}</p>
                 </div>
                 <div className="mt-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#687586]">MCP Tool IDs</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#687586]">Tool permissions</p>
                   <p className="mt-2 text-sm leading-6 text-[#314052]">{agent.toolIds.join(", ")}</p>
                 </div>
               </article>
@@ -1267,7 +1317,7 @@ export function Dashboard() {
           </div>
 
           <div className="mt-6 border-t border-line pt-5">
-            <h3 className="text-base font-semibold text-ink">Skill packs</h3>
+            <h3 className="text-base font-semibold text-ink">Reusable skills</h3>
             <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {catalog.skills.map((skill) => (
                 <article key={skill.id} className="rounded-md border border-line bg-panel px-4 py-3">
@@ -1278,14 +1328,14 @@ export function Dashboard() {
               ))}
             </div>
           </div>
-        </section>
+        </details>
 
         <section className="rounded-md border border-line bg-white p-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-ink">Evaluation harness</h2>
+              <h2 className="text-lg font-semibold text-ink">Quality regression checks</h2>
               <p className="mt-1 max-w-3xl text-sm leading-6 text-[#5c6775]">
-                Deterministic regression checks for source coverage, groundedness, examples, questions, slides, and reviewer accuracy.
+                Run fixed-sample checks before changing prompts, workflow logic, or model settings.
               </p>
             </div>
             <form onSubmit={runEvaluation}>
@@ -1293,7 +1343,7 @@ export function Dashboard() {
                 className="rounded-md bg-[#314052] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#253142]"
                 type="submit"
               >
-                Run evaluation
+                Run checks
               </button>
             </form>
           </div>
@@ -1422,6 +1472,18 @@ function stringifyPreview(value: unknown) {
   }
 
   return JSON.stringify(value);
+}
+
+function formatStatusLabel(status: string | null | undefined) {
+  if (!status) {
+    return "Not set";
+  }
+
+  return status
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function ReviewResultBlock({
