@@ -199,6 +199,14 @@ export function Dashboard() {
       .join(", ") || "No agent tasks";
   }, [selectedProject]);
 
+  const exportReady = useMemo(() => {
+    return Boolean(
+      selectedProject &&
+        (selectedProject.status === "APPROVED" ||
+          selectedProject.artifacts.some((artifact) => artifact.type === "FINAL_PACKAGE"))
+    );
+  }, [selectedProject]);
+
   async function loadInitialData() {
     setIsLoading(true);
     setError(null);
@@ -1183,6 +1191,50 @@ export function Dashboard() {
                   Complete final acceptance
                 </button>
               </form>
+            </section>
+
+            <section className="rounded-md border border-line bg-white p-5">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-lg font-semibold text-ink">Export preparation</h2>
+                <p className="text-sm text-[#5c6775]">
+                  Export the final accepted lesson package as structured JSON or Markdown.
+                </p>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <StatusRow label="Export ready" value={exportReady ? "Ready" : "Not ready"} />
+                <StatusRow
+                  label="Final package"
+                  value={
+                    selectedProject?.artifacts.some((artifact) => artifact.type === "FINAL_PACKAGE")
+                      ? "Created"
+                      : "Missing"
+                  }
+                />
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <a
+                  className={`rounded-md px-4 py-2 text-sm font-semibold transition ${
+                    exportReady
+                      ? "bg-[#258c7a] text-white hover:bg-[#1f7668]"
+                      : "pointer-events-none bg-[#9aa4b1] text-white"
+                  }`}
+                  href={selectedProjectId ? `/api/lesson-projects/${selectedProjectId}/export?format=json` : "#"}
+                >
+                  Export JSON
+                </a>
+                <a
+                  className={`rounded-md px-4 py-2 text-sm font-semibold transition ${
+                    exportReady
+                      ? "bg-[#314052] text-white hover:bg-[#253142]"
+                      : "pointer-events-none bg-[#9aa4b1] text-white"
+                  }`}
+                  href={selectedProjectId ? `/api/lesson-projects/${selectedProjectId}/export?format=markdown` : "#"}
+                >
+                  Export Markdown
+                </a>
+              </div>
             </section>
           </div>
         </section>

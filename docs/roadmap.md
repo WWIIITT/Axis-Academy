@@ -163,7 +163,7 @@ Implemented scope:
 - Harness scoring logic is implemented in `src/lib/evaluation/harness.ts`.
 - `GET/POST /api/evaluation/run` returns a regression report.
 - Dashboard includes an Evaluation harness panel with aggregate scores and sample failures.
-- `npm run eval` calls the local API and writes `evaluation-reports/latest.json`.
+- `npm run eval` runs the deterministic CLI harness and writes `evaluation-reports/latest.json` without requiring the dev server.
 - Reports include provider/model readiness, prompt version, workflow version, thresholds, aggregate scores, and per-sample failures.
 
 ## 8. Milestone 7: Export Preparation
@@ -179,6 +179,15 @@ Done when:
 - Final acceptance can produce a complete lesson package.
 - The export includes lesson summary, slides, examples, questions, and review metadata.
 - Export does not include API keys, raw provider responses, or internal debug data.
+
+Implemented scope:
+
+- Final acceptance creates a `FINAL_PACKAGE` artifact with accepted artifact ids, accepted artifact types, export readiness, and supported export formats.
+- `GET /api/lesson-projects/:id/export?format=json` exports a structured lesson package.
+- `GET /api/lesson-projects/:id/export?format=markdown` exports a Markdown lesson package.
+- Export output includes project metadata, lesson summary, slide outline, slide content, examples, questions, sanitized review metadata, and source references.
+- Export output excludes API keys, raw provider responses, raw prompts, tool call payloads, agent task internals, and debug traces.
+- Dashboard includes Export JSON and Export Markdown links once the project is approved or has a final package.
 
 ## 9. Later Versions
 

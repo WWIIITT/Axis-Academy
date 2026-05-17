@@ -56,10 +56,11 @@ This document lists work that should be done later, but should not be implemente
 
 ## Milestone 7: Export Preparation
 
-- Export final accepted lesson packages as structured JSON.
-- Export final accepted lesson packages as Markdown.
-- Preserve a structure that can later support PPTX export.
-- Exclude raw provider responses, API keys, internal prompts, and debug-only telemetry from teacher exports.
+- Add actual PPTX export using the existing structured slide outline and slide content.
+- Add teacher-facing export templates.
+- Add school branding options for exported packages.
+- Add export history and compare exported versions.
+- Add background export jobs for large packages.
 
 ## Authentication and Authorization
 

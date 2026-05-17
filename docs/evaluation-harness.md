@@ -14,9 +14,9 @@ Milestone 6 implements a deterministic MVP harness:
 - Aggregate regression report.
 - API route: `GET/POST /api/evaluation/run`.
 - Dashboard panel for running the harness and inspecting failures.
-- CLI helper: `npm run eval`, which calls the local Next.js API and writes `evaluation-reports/latest.json`.
+- CLI helper: `npm run eval`, which runs the deterministic harness directly and writes `evaluation-reports/latest.json`.
 
-The CLI expects the local dev server to be running because it exercises the same API route as the dashboard.
+The dashboard uses the Next.js API route. The CLI does not require the local dev server, which keeps regression checks independent from `.next` development cache state.
 
 ## Metrics
 

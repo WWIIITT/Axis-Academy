@@ -41,8 +41,12 @@ Current and near-term API routes:
 - `POST /api/lesson-projects/:id/workflow/start`
 - `POST /api/lesson-projects/:id/workflow/advance`
 - `GET /api/lesson-projects/:id/workflow`
+- `GET /api/lesson-projects/:id/export?format=json`
+- `GET /api/lesson-projects/:id/export?format=markdown`
 
 Raw prompts, raw provider responses, and API keys should not be exposed to the teacher-facing UI by default.
+
+Export routes must also exclude raw prompts, raw provider responses, API keys, internal tool call payloads, agent task internals, and debug traces.
 
 ## Live Workflow Trace UI
 
@@ -120,6 +124,32 @@ Sensitive data rules:
 - Raw provider logs are not teacher-visible by default.
 - Prompts and responses, if stored later, must be marked as internal telemetry.
 - Future school deployments need a data retention policy.
+
+## Export Preparation
+
+The MVP export boundary supports structured JSON and Markdown. Export is available after final acceptance creates a `FINAL_PACKAGE` artifact or the project is otherwise marked `APPROVED`.
+
+Exported packages include:
+
+- Project metadata
+- Lesson summary
+- Slide outline
+- Slide content
+- Examples
+- Questions
+- Sanitized review metadata
+- Source references
+
+Exported packages exclude:
+
+- API keys
+- Raw prompts
+- Raw provider responses
+- Internal tool call payloads
+- Agent task debug state
+- Stack traces or server telemetry
+
+The structured JSON schema is ready for later PPTX export because slide outline and slide content remain separated from Markdown rendering.
 
 ## Observability
 

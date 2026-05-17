@@ -76,6 +76,9 @@ export async function POST(request: Request, context: RouteContext) {
           acceptedArtifactIds: project.artifacts
             .filter((artifact) => teacherReviewArtifactTypes.includes(artifact.type))
             .map((artifact) => artifact.id),
+          acceptedArtifactTypes: teacherReviewArtifactTypes,
+          readyForExport: true,
+          exportFormats: ["json", "markdown"],
           note: parsed.data.note ?? null
         },
         sourceReferences: [],
