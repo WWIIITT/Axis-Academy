@@ -98,6 +98,7 @@ export function Dashboard() {
   const [gradeLevel, setGradeLevel] = useState("");
   const [eventMessage, setEventMessage] = useState("");
   const [workflowStartMessage, setWorkflowStartMessage] = useState("");
+  const [workflowAdvanceMessage, setWorkflowAdvanceMessage] = useState("");
   const [sourceText, setSourceText] = useState("");
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [sourceInputType, setSourceInputType] = useState<"TEXT" | "PDF" | "PPTX">("TEXT");
@@ -315,6 +316,41 @@ export function Dashboard() {
       await loadSelectedProject(selectedProjectId);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Unknown workflow error.");
+    }
+  }
+
+  async function advanceWorkflow(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedProjectId) {
+      return;
+    }
+
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/lesson-projects/${selectedProjectId}/workflow/advance`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          toolId: "structured_output_validator",
+          inputJson: {
+            source: "dashboard"
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Unable to advance workflow.");
+      }
+
+      setWorkflowAdvanceMessage("Workflow advanced.");
+      await loadSelectedProject(selectedProjectId);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Unknown workflow advance error.");
     }
   }
 
@@ -602,6 +638,17 @@ export function Dashboard() {
                   Start Project Manager
                 </button>
                 <p className="text-sm text-[#5c6775]">{workflowStartMessage}</p>
+              </form>
+
+              <form className="mt-3 flex flex-col gap-3 sm:flex-row" onSubmit={advanceWorkflow}>
+                <button
+                  className="rounded-md bg-[#314052] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#253142] disabled:cursor-not-allowed disabled:bg-[#9aa4b1]"
+                  disabled={!selectedProjectId}
+                  type="submit"
+                >
+                  Advance workflow
+                </button>
+                <p className="text-sm text-[#5c6775]">{workflowAdvanceMessage}</p>
               </form>
 
               <form className="mt-4 flex flex-col gap-3 sm:flex-row" onSubmit={createWorkflowEvent}>

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { AgentTaskStatus, WorkflowEventType } from "@prisma/client";
 import { databaseUnavailableResponse } from "@/lib/api-errors";
 import { getCurrentTeacherId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { dispatchToolCall, markAgentTaskStatus, persistValidatedEnvelope, writeWorkflowEvent } from "@/lib/orchestration/dispatcher";
 import { buildValidatedHandoff } from "@/lib/orchestration/dispatcher";
+import { callProvider } from "@/lib/orchestration/provider";
 
 type RouteContext = {
   params: Promise<{
@@ -57,6 +59,23 @@ export async function POST(request: Request, context: RouteContext) {
       inputJson
     });
 
+    const providerResult = await callProvider({
+      messages: [
+        {
+          role: "system",
+          content: "You are Project Manager. Return concise JSON only."
+        },
+        {
+          role: "user",
+          content: JSON.stringify({
+            projectId: project.id,
+            agentTaskId: latestTask.id,
+            toolCall
+          })
+        }
+      ]
+    });
+
     const envelope = await persistValidatedEnvelope({
       agentName: "project-manager",
       taskId: latestTask.id,
@@ -64,7 +83,7 @@ export async function POST(request: Request, context: RouteContext) {
         agentName: "project-manager",
         taskId: latestTask.id,
         status: "completed",
-        summary: "Project Manager advanced one step.",
+        summary: providerResult.content.trim() || "Project Manager advanced one step.",
         artifacts: [],
         sourceReferences: [],
         warnings: [],
@@ -96,9 +115,10 @@ export async function POST(request: Request, context: RouteContext) {
       message: handoff.summary,
       teacherVisible: true,
       metadata: {
-        handoff,
-        toolCall
-      }
+        handoff: JSON.parse(JSON.stringify(handoff)) as Prisma.InputJsonObject,
+        toolCall: JSON.parse(JSON.stringify(toolCall)) as Prisma.InputJsonObject,
+        providerResult: JSON.parse(JSON.stringify(providerResult)) as Prisma.InputJsonObject
+      } as Prisma.InputJsonObject
     });
 
     return NextResponse.json({

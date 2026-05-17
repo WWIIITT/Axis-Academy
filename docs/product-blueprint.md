@@ -1,102 +1,90 @@
-# Axis Academy 產品藍圖
+# Axis Academy Product Blueprint
 
-## 1. 產品定位
+## Product Positioning
 
-Axis Academy 是一個面向老師的 AI 教學內容製作平台。老師上傳想教授的教材後，系統會由多個 AI agent 協作，將原始內容整理成可教、可審核、可輸出的教學資產。
+Axis Academy is a teacher-facing AI lesson production platform. Teachers upload or paste teaching materials, and a multi-agent workflow turns those materials into source-grounded lesson assets such as summaries, examples, questions, slides, and review reports.
 
-MVP 的核心目標不是取代老師，而是把繁重的教材整理、例子設計、題目設計和初步審查流程自動化，讓老師把時間集中在教學判斷、內容修訂和最終把關。
+The MVP does not replace teachers. It reduces repetitive preparation work while keeping teachers responsible for review, editing, and final acceptance.
 
-## 2. MVP 目標
+## MVP Goals
 
-- 支援老師上傳 `PDF`、`PPTX` 或貼上文字內容。
-- 從原始教材提煉課程重點、概念結構、先備知識和學習目標。
-- 生成可用於授課的投影片內容、教學例子和題目。
-- 所有生成內容都需要能追溯到原始教材來源。
-- 老師可以審核、編輯、局部重生和最終確認輸出。
-- 網站介面顯示 live workflow trace，讓老師知道每個 agent 正在做什麼、完成了什麼、有哪些風險或審查警告。
+- Support PDF, PPTX, and pasted text inputs.
+- Extract usable source text and build traceable source chunks.
+- Generate lesson summaries, examples, questions, and slide-ready content.
+- Keep generated content source-grounded or explicitly marked as derived.
+- Show a teacher-readable workflow trace.
+- Let teachers approve, edit, regenerate selected sections, and complete final acceptance.
 
-## 3. 主要使用者
+## Primary User
 
-第一版主要使用者是老師。
+The first MVP user is a teacher.
 
-老師的典型需求：
+Teacher needs:
 
-- 快速把已有教材轉成一堂結構清晰的課。
-- 取得更好的 worked examples，而不是只得到摘要。
-- 取得能覆蓋重點、難度分層、附答案與解析的問題。
-- 確認 AI 沒有脫離教材、曲解概念或漏掉重要內容。
-- 保留修改權與最終審批權。
+- Convert existing materials into a clear lesson quickly.
+- Get higher-quality worked examples.
+- Get questions with answers, explanations, difficulty, and concept coverage.
+- Check whether AI missed or distorted important source content.
+- Keep final approval control.
 
-## 4. 核心工作流
+## Core Workflow
 
-1. 老師建立 lesson project。
-2. 老師上傳 PDF/PPTX 或貼上文字。
-3. 系統解析教材並建立 source map。
-4. Document Analyst 提取概念、定義、結構和來源 references。
-5. Subject Teacher 檢查教學順序、難度、常見誤解和科目嚴謹度。
-6. Content Designer 建立 lesson structure 和重點摘要。
-7. Example Designer 設計高品質例子與講解。
-8. Question Designer 設計題目、答案、解析、難度和來源覆蓋。
-9. Slide Designer 生成 slide-ready content。
-10. Slide Reviewer 和 Quality Reviewer 檢查覆蓋率、正確性、清晰度和 source grounding。
-11. Manager 整合結果並標記需要老師注意的地方。
-12. 老師審核、編輯、局部重生或最終接受。
+1. Teacher creates a lesson project.
+2. Teacher uploads PDF/PPTX or pastes text.
+3. System parses materials and creates a source map.
+4. Document Analyst extracts concepts, definitions, structure, and references.
+5. Subject Teacher reviews sequence, difficulty, prerequisites, and misconceptions.
+6. Content Designer creates lesson structure and summary.
+7. Example Designer creates worked examples.
+8. Question Designer creates questions, answers, explanations, and difficulty labels.
+9. Slide Designer creates slide-ready content.
+10. Slide Reviewer and Quality Reviewer check clarity, coverage, correctness, and source grounding.
+11. Project Manager consolidates results and flags teacher attention points.
+12. Teacher reviews, edits, regenerates selected sections, or accepts the final package.
 
-## 5. MVP 產出
+## MVP Outputs
 
-每個 lesson project 會產生以下內容：
+Each lesson project should produce:
 
-- Lesson summary：課程精華、核心概念、學習目標和先備知識。
-- Slide outline：投影片順序、每頁教學目的、關鍵內容和講解提示。
-- Slide content：可直接轉成投影片的標題、重點、例子、圖表建議和 speaker notes。
-- Examples：高品質 worked examples，包含步驟、講解、常見錯誤和來源 references。
-- Questions：題目、答案、解析、難度、題型、覆蓋概念和來源 references。
-- Review report：覆蓋率、groundedness、潛在錯誤、缺漏和建議修改。
+- Lesson summary
+- Slide outline
+- Slide content
+- Worked examples
+- Questions
+- Review report
+- Final package
 
-## 6. 老師控制權
+## Correctness Strategy
 
-MVP 需要支援四種老師操作：
+The first correctness strategy is source-grounded review plus teacher approval.
 
-- Approve：接受某個 section 或整份輸出。
-- Edit：直接修改摘要、投影片、例子或題目。
-- Regenerate selected section：只重生指定內容，例如某一題、某一頁 slide 或某組例子。
-- Final acceptance：確認整份 lesson package 可用於導出或後續發布。
+Rules:
 
-系統不得把未經老師確認的內容視為最終版本。
+- Important concepts, definitions, examples, and answers need source support.
+- Derived content must be marked with a derived-content reason.
+- Unsupported content must be surfaced as a warning.
+- Agents must not add external facts unless a future external fact-checking workflow is explicitly added.
+- Final correctness remains teacher-approved, but the system must complete automatic checks first.
 
-## 7. 正確性原則
+## Non-Goals
 
-Axis Academy 的第一版正確性策略是 source-grounded review 加老師審批。
+The MVP does not include:
 
-系統需要遵守以下原則：
+- Student practice portal.
+- LMS publishing.
+- Multi-tenant school administration.
+- Video or audio material processing.
+- External web fact-checking.
+- Full PowerPoint export engine.
+- Per-agent model routing or provider fallback.
 
-- 所有重要概念、定義、例子和答案都需要連回原始教材 evidence。
-- 如果內容是 agent 基於教材延伸設計，必須標記為 derived content。
-- 如果某項內容缺少來源支持，review report 必須列為 warning。
-- Agent 不應自動加入外部事實，除非未來版本明確加入外部 fact-checking 流程。
-- 最終正確性由老師審批，但 agent 必須先完成可解釋的自動審查。
+## Success Criteria
 
-## 8. 非目標
+The MVP is successful when:
 
-MVP 不包含以下範圍：
-
-- 學生端練習平台。
-- 自動發布到 LMS。
-- 多租戶學校管理。
-- 影片和音訊教材處理。
-- 外部網路 fact-checking。
-- 完整 PowerPoint 匯出引擎。
-- per-agent model routing 和 provider fallback。
-
-這些可以在後續版本加入，但不應阻塞第一版文件和 MVP 架構。
-
-## 9. 成功標準
-
-MVP 可被視為成功，如果能做到：
-
-- 老師能從一份 PDF/PPTX/text 建立 lesson project。
-- 系統能生成完整的 slides、examples 和 questions。
-- Workflow trace 能清楚顯示 agent 狀態與審查結果。
-- 每個生成內容都能看到來源或 warning。
-- 老師能完成 approve/edit/regenerate/final acceptance。
-- Evaluation harness 能用固定教材樣本比較不同 prompt、model 或 orchestration 版本的品質。
+- A teacher can create a lesson project from PDF, PPTX, or text.
+- The system can produce slides, examples, and questions.
+- Workflow trace shows agent state and review outcomes clearly.
+- Generated content shows source support or warnings.
+- The teacher can approve, edit, regenerate, and accept final content.
+- Evaluation harness can compare prompts, models, or orchestration versions on fixed materials.

@@ -1,7 +1,7 @@
 import { Prisma, AgentTaskStatus, WorkflowEventType } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { buildHandoff, buildReview, buildToolCall, validateAgentEnvelope, validateToolPermission } from "@/lib/orchestration/runtime";
-import { getToolContract } from "@/lib/mcp/catalog";
+import { getMcpToolById } from "@/lib/mcp/catalog";
 
 export type DispatchToolInput = {
   lessonProjectId: string;
@@ -18,12 +18,14 @@ export async function dispatchToolCall(input: DispatchToolInput) {
     throw new Error(permission.error ?? "Tool is not permitted for this agent.");
   }
 
-  const tool = getToolContract(input.toolId);
+  const tool = getMcpToolById(input.toolId);
   if (!tool) {
     throw new Error("Unknown tool.");
   }
 
   const toolCall = buildToolCall({
+    id: `${input.agentTaskId}-${input.toolId}-${Date.now()}`,
+    agentTaskId: input.agentTaskId,
     toolId: input.toolId,
     inputJson: input.inputJson,
     outputJson: { ok: true, toolId: input.toolId },
