@@ -11,11 +11,15 @@ This document lists work that should be done later, but should not be implemente
 - Create source maps with page, slide, section, and paragraph references.
 - Surface parsing warnings in the dashboard.
 - Add basic file validation for type, size, and empty content.
+- Implement ingestion tools that Milestone 3 agents can call through a tool dispatcher.
 
 ## Milestone 3: Agent Pipeline MVP
 
 - Implement the Manager orchestration service.
 - Implement agent execution boundaries for Document Analyst, Subject Teacher, Content Designer, Example Designer, Question Designer, and Slide Designer.
+- Convert the Milestone 1 agent skills/tools registry into executable skill and tool call contracts.
+- Add a tool dispatcher with per-agent tool permissions.
+- Record tool calls, tool inputs, tool outputs, failures, and timings.
 - Add structured output schemas for every agent.
 - Add output validation before accepting handoffs.
 - Add retry handling for invalid JSON, missing source references, and recoverable provider failures.
